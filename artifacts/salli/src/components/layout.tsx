@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { BookOpen, Compass, Home, LayoutDashboard, Menu, X, User, LogOut } from "lucide-react";
+import { BookOpen, Compass, Home, LayoutDashboard, Menu, X, User, LogOut, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLogout } from "@workspace/api-client-react";
@@ -28,6 +28,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/community", label: "Community", icon: Users },
     { href: "/khushoo", label: "Khushu'", icon: Compass },
     { href: "/motivation", label: "Motivation", icon: BookOpen },
   ];

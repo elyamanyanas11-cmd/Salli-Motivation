@@ -80,3 +80,15 @@ export interface PrayerStats {
   weeklyTotal: number;
   weeklyPercentage: number;
 }
+
+export interface LeaderboardEntry {
+  userId: number;
+  displayName: string;
+  /** @nullable */
+  city?: string | null;
+  weeklyTotal: number;
+  weeklyPercentage: number;
+  currentStreak: number;
+  isCurrentUser: boolean;
+  rank: number;
+}

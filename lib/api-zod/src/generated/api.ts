@@ -154,6 +154,21 @@ export const GetWeeklyPrayersResponse = zod.object({
 });
 
 /**
+ * @summary Get all users ranked by weekly prayer completion
+ */
+export const GetLeaderboardResponseItem = zod.object({
+  userId: zod.number(),
+  displayName: zod.string(),
+  city: zod.string().nullish(),
+  weeklyTotal: zod.number(),
+  weeklyPercentage: zod.number(),
+  currentStreak: zod.number(),
+  isCurrentUser: zod.boolean(),
+  rank: zod.number(),
+});
+export const GetLeaderboardResponse = zod.array(GetLeaderboardResponseItem);
+
+/**
  * @summary Get streak, total, and weekly statistics
  */
 export const GetPrayerStatsResponse = zod.object({

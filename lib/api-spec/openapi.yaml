@@ -247,6 +247,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [users]
+      summary: Get all users ranked by weekly prayer completion
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /prayers/stats:
     get:
       operationId: getPrayerStats
@@ -441,3 +462,31 @@ components:
         - totalPrayers
         - weeklyTotal
         - weeklyPercentage
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        userId:
+          type: integer
+        displayName:
+          type: string
+        city:
+          type: ["string", "null"]
+        weeklyTotal:
+          type: integer
+        weeklyPercentage:
+          type: number
+        currentStreak:
+          type: integer
+        isCurrentUser:
+          type: boolean
+        rank:
+          type: integer
+      required:
+        - userId
+        - displayName
+        - weeklyTotal
+        - weeklyPercentage
+        - currentStreak
+        - isCurrentUser
+        - rank

@@ -9,6 +9,7 @@
 export * from "./authUser";
 export * from "./errorResponse";
 export * from "./healthStatus";
+export * from "./leaderboardEntry";
 export * from "./loginBody";
 export * from "./prayerDay";
 export * from "./prayerStats";
