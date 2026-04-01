@@ -1,0 +1,14 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "8Xw3OdlXCU_UgLwURJQuT"
+uri = "file://artifacts/salli/public/hero-mosque.png"
+type = "image"
+title = "Mosque at dawn"
+
+[[generated]]
+id = "a0v85_-JmEkCcHBINigMq"
+uri = "file://artifacts/salli/public/motivation-bg.png"
+type = "image"
+title = "Abstract warm particles"
