@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Check, ChevronRight, Moon, Sun, Sunrise, Sunset } from "lucide-react";
+import { Check, ChevronRight, Moon, Sun, Sunrise, Sunset, Compass } from "lucide-react";
 import { format } from "date-fns";
-import { usePrayers } from "@/hooks/use-prayers";
+import { useGetPrayerDay, useMarkPrayer, useUnmarkPrayer, getGetPrayerDayQueryKey, getGetWeeklyPrayersQueryKey, getGetPrayerStatsQueryKey } from "@workspace/api-client-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useQueryClient } from "@tanstack/react-query";
 import { getPrayerCountdown, PRAYER_NAMES, getPrayerDisplayName, PRAYER_SCHEDULE } from "@/lib/prayer-times";
 import { getDailyMotivation } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const ICONS = {
   fajr: Sunrise,
@@ -16,8 +19,9 @@ const ICONS = {
 };
 
 export default function Home() {
-  const { getDay, togglePrayer } = usePrayers();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [now, setNow] = useState(new Date());
+  const queryClient = useQueryClient();
   
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -25,7 +29,34 @@ export default function Home() {
   }, []);
 
   const todayStr = format(now, "yyyy-MM-dd");
-  const todayData = getDay(todayStr);
+  
+  const { data: todayData, isLoading: isPrayersLoading } = useGetPrayerDay(todayStr, {
+    query: {
+      enabled: isAuthenticated,
+    }
+  });
+
+  const markPrayerMutation = useMarkPrayer();
+  const unmarkPrayerMutation = useUnmarkPrayer();
+
+  const togglePrayer = (prayer: keyof typeof ICONS) => {
+    if (!todayData) return;
+    
+    const isCompleted = todayData[prayer];
+    const mutation = isCompleted ? unmarkPrayerMutation : markPrayerMutation;
+    
+    mutation.mutate(
+      { date: todayStr, prayer },
+      {
+        onSuccess: (newData) => {
+          queryClient.setQueryData(getGetPrayerDayQueryKey(todayStr), newData);
+          queryClient.invalidateQueries({ queryKey: getGetPrayerStatsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetWeeklyPrayersQueryKey() });
+        }
+      }
+    );
+  };
+
   const countdown = getPrayerCountdown(now);
   const dailyReason = getDailyMotivation();
 
@@ -42,7 +73,7 @@ export default function Home() {
         
         <div className="absolute inset-0 flex flex-col items-center justify-end p-6 md:p-12 text-center">
           <h1 className="text-3xl md:text-5xl font-serif font-bold text-foreground mb-3 animate-in slide-in-from-bottom-4 duration-700">
-            As-salamu alaykum
+            As-salamu alaykum{user ? `, ${user.displayName}` : ''}
           </h1>
           <p className="text-muted-foreground text-sm md:text-lg max-w-md mx-auto mb-6 animate-in slide-in-from-bottom-5 duration-700 delay-100">
             Never miss a prayer again. A quiet companion for your daily devotion.
@@ -105,61 +136,86 @@ export default function Home() {
 
         {/* Today's Tracker */}
         <section className="md:col-span-7 glass rounded-3xl p-6 md:p-8 shadow-md">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-serif font-bold text-foreground">Today's Prayers</h2>
-              <p className="text-sm text-muted-foreground">{format(now, "EEEE, MMMM do")}</p>
+          {!isAuthenticated && !isAuthLoading ? (
+            <div className="h-full flex flex-col items-center justify-center text-center py-8">
+              <div className="w-16 h-16 rounded-full bg-secondary/10 text-secondary flex items-center justify-center mb-4">
+                <Compass className="w-8 h-8" />
+              </div>
+              <h2 className="text-2xl font-serif font-bold text-foreground mb-2">Track Your Prayers</h2>
+              <p className="text-muted-foreground mb-6 max-w-sm">
+                Log in to keep a daily record of your prayers and build consistency in your worship.
+              </p>
+              <Link href="/login">
+                <Button className="rounded-full px-8" data-testid="button-login-prompt">
+                  Log in to track
+                </Button>
+              </Link>
             </div>
-            <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-              {Object.values(todayData).filter(Boolean).length}/5 Completed
+          ) : isPrayersLoading ? (
+            <div className="h-full flex flex-col items-center justify-center">
+              <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
             </div>
-          </div>
-
-          <div className="space-y-3">
-            {PRAYER_NAMES.map((prayer, index) => {
-              const Icon = ICONS[prayer];
-              const isChecked = todayData[prayer];
-              
-              return (
-                <div 
-                  key={prayer}
-                  className={cn(
-                    "flex items-center justify-between p-4 rounded-2xl border transition-all duration-300",
-                    isChecked 
-                      ? "bg-primary/5 border-primary/20 shadow-sm" 
-                      : "bg-background border-border hover:border-primary/30 hover:shadow-sm"
-                  )}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-                      isChecked ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                    )}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-foreground capitalize">{prayer}</h3>
-                      <p className="text-xs text-muted-foreground">{PRAYER_SCHEDULE[prayer]}</p>
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => togglePrayer(todayStr, prayer)}
-                    data-testid={`checkbox-prayer-${prayer}`}
-                    className={cn(
-                      "w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300",
-                      isChecked 
-                        ? "bg-primary border-primary text-primary-foreground" 
-                        : "border-muted-foreground/30 hover:border-primary text-transparent"
-                    )}
-                  >
-                    <Check className={cn("w-4 h-4 transition-transform", isChecked ? "scale-100" : "scale-0")} />
-                  </button>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-serif font-bold text-foreground">Today's Prayers</h2>
+                  <p className="text-sm text-muted-foreground">{format(now, "EEEE, MMMM do")}</p>
                 </div>
-              );
-            })}
-          </div>
+                <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
+                  {todayData?.completedCount || 0}/5 Completed
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {PRAYER_NAMES.map((prayer, index) => {
+                  const Icon = ICONS[prayer];
+                  const isChecked = todayData?.[prayer] || false;
+                  
+                  return (
+                    <div 
+                      key={prayer}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-2xl border transition-all duration-300",
+                        isChecked 
+                          ? "bg-primary/5 border-primary/20 shadow-sm" 
+                          : "bg-background border-border hover:border-primary/30 hover:shadow-sm"
+                      )}
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                          isChecked ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        )}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-foreground capitalize">{prayer}</h3>
+                          <p className="text-xs text-muted-foreground">{PRAYER_SCHEDULE[prayer]}</p>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => togglePrayer(prayer)}
+                        disabled={markPrayerMutation.isPending || unmarkPrayerMutation.isPending}
+                        data-testid={`checkbox-prayer-${prayer}`}
+                        className={cn(
+                          "w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300",
+                          isChecked 
+                            ? "bg-primary border-primary text-primary-foreground" 
+                            : "border-muted-foreground/30 hover:border-primary text-transparent",
+                          (markPrayerMutation.isPending || unmarkPrayerMutation.isPending) && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        <Check className={cn("w-4 h-4 transition-transform", isChecked ? "scale-100" : "scale-0")} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </section>
       </div>
 

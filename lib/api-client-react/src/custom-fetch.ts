@@ -331,6 +331,10 @@ export async function customFetch<T = unknown>(
 
   const method = resolveMethod(input, init.method);
 
+  if (init.credentials === undefined) {
+    init.credentials = "include";
+  }
+
   if (init.body != null && (method === "GET" || method === "HEAD")) {
     throw new TypeError(`customFetch: ${method} requests cannot have a body.`);
   }

@@ -1,18 +1,34 @@
-import { useState, useMemo } from "react";
-import { usePrayers } from "@/hooks/use-prayers";
-import { startOfWeek, format } from "date-fns";
-import { Trophy, Flame, Star, Award, Medal, Crown, Shield, Activity, Users, Sunrise, Moon, Check } from "lucide-react";
+import { useState } from "react";
+import { Link } from "wouter";
+import { format, startOfWeek, subDays } from "date-fns";
+import { Trophy, Flame, Star, Award, Medal, Crown, Shield, Activity, Users, Sunrise, Moon, Check, Compass } from "lucide-react";
+import { useGetWeeklyPrayers, useGetPrayerStats } from "@workspace/api-client-react";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { PRAYER_NAMES, getPrayerDisplayName } from "@/lib/prayer-times";
+import { PRAYER_NAMES } from "@/lib/prayer-times";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
-  const { getStreak, getTotalPrayers, getWeeklyStats } = usePrayers();
-  const [currentDate] = useState(new Date());
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday start
-  const weeklyStats = getWeeklyStats(weekStart);
-  const streak = getStreak();
-  const totalPrayers = getTotalPrayers();
+  const { data: weeklyData, isLoading: isWeeklyLoading } = useGetWeeklyPrayers({
+    query: {
+      enabled: isAuthenticated,
+    }
+  });
+
+  const { data: statsData, isLoading: isStatsLoading } = useGetPrayerStats({
+    query: {
+      enabled: isAuthenticated,
+    }
+  });
+
+  const isLoading = isAuthLoading || isWeeklyLoading || isStatsLoading;
+
+  const streak = statsData?.currentStreak || 0;
+  const totalPrayers = statsData?.totalPrayers || 0;
+  const weeklyPercentage = statsData?.weeklyPercentage || 0;
+  const weeklyTotal = statsData?.weeklyTotal || 0;
 
   const BADGES = [
     { id: "first", title: "First Step", desc: "Log your first prayer", icon: Star, condition: totalPrayers >= 1, color: "text-amber-500", bg: "bg-amber-500/10" },
@@ -21,17 +37,9 @@ export default function Dashboard() {
     { id: "total-50", title: "Consistent", desc: "Log 50 total prayers", icon: Activity, condition: totalPrayers >= 50, color: "text-blue-500", bg: "bg-blue-500/10" },
     { id: "streak-30", title: "Month Warrior", desc: "30-day perfect streak", icon: Crown, condition: streak >= 30, color: "text-purple-500", bg: "bg-purple-500/10" },
     { id: "total-150", title: "Diamond Devotee", desc: "Log 150 total prayers", icon: Trophy, condition: totalPrayers >= 150, color: "text-teal-400", bg: "bg-teal-400/10" },
-    { id: "fajr-bird", title: "Early Bird", desc: "Never miss Fajr (symbolic)", icon: Sunrise, condition: totalPrayers >= 20, color: "text-yellow-500", bg: "bg-yellow-500/10" }, // Mock condition
+    { id: "fajr-bird", title: "Early Bird", desc: "Never miss Fajr (symbolic)", icon: Star, condition: totalPrayers >= 20, color: "text-yellow-500", bg: "bg-yellow-500/10" },
     { id: "isha-owl", title: "Night Owl", desc: "Never miss Isha (symbolic)", icon: Moon, condition: totalPrayers >= 20, color: "text-indigo-500", bg: "bg-indigo-500/10" },
   ];
-
-  // For Early Bird and Night Owl, we'll just use simple imports if we need them, or fallback to generic icons
-  // Replacing custom missing icons with generic lucide ones since we didn't import Sunrise/Moon at top
-  const badgesWithIcons = BADGES.map(b => {
-    if (b.id === 'fajr-bird') return { ...b, icon: Star };
-    if (b.id === 'isha-owl') return { ...b, icon: Moon };
-    return b;
-  });
 
   const getMotivationalMessage = () => {
     if (streak === 0) return "Every day is a fresh start. Bismillah.";
@@ -46,6 +54,33 @@ export default function Dashboard() {
     { name: "Fatima", percent: 85, avatar: "F" },
     { name: "Omar", percent: 60, avatar: "O" },
   ];
+
+  if (!isAuthenticated && !isAuthLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-20 h-20 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-6">
+          <Compass className="w-10 h-10" />
+        </div>
+        <h1 className="text-3xl font-serif font-bold text-foreground mb-4">Your Spiritual Journey</h1>
+        <p className="text-muted-foreground text-lg max-w-md mb-8">
+          Log in to track your prayers, build consistency, and see your progress over time.
+        </p>
+        <Link href="/login">
+          <Button className="rounded-full px-8 py-6 text-lg shadow-lg" data-testid="button-login-prompt-dashboard">
+            Log in to view dashboard
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <div className="w-10 h-10 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
@@ -75,15 +110,15 @@ export default function Dashboard() {
         <div className="glass rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-sm col-span-2 md:col-span-1">
           <div className="w-full flex items-center justify-between mb-4">
             <span className="text-sm font-medium text-muted-foreground">Weekly Goal</span>
-            <span className="text-sm font-bold text-primary">{weeklyStats.percentage}%</span>
+            <span className="text-sm font-bold text-primary">{weeklyPercentage}%</span>
           </div>
           <div className="w-full h-3 bg-muted rounded-full overflow-hidden mb-2">
             <div 
               className="h-full bg-primary rounded-full transition-all duration-1000 ease-out"
-              style={{ width: `${weeklyStats.percentage}%` }}
+              style={{ width: `${weeklyPercentage}%` }}
             />
           </div>
-          <p className="text-xs text-muted-foreground w-full text-right">{weeklyStats.completed} / {weeklyStats.total}</p>
+          <p className="text-xs text-muted-foreground w-full text-right">{weeklyTotal} / 35</p>
         </div>
       </div>
 
@@ -107,22 +142,21 @@ export default function Dashboard() {
                 
                 {/* Days Rows */}
                 <div className="space-y-3">
-                  {weeklyStats.weekDays.map((day) => {
-                    const isToday = day.dateStr === format(new Date(), 'yyyy-MM-dd');
+                  {weeklyData?.days.map((day) => {
                     return (
-                      <div key={day.dateStr} className={cn(
+                      <div key={day.date} className={cn(
                         "grid grid-cols-6 gap-2 p-2 rounded-xl items-center",
-                        isToday ? "bg-primary/5" : ""
+                        day.isToday ? "bg-primary/5" : ""
                       )}>
                         <div className="text-sm font-medium">
-                          <span className="block">{format(day.date, 'EEE')}</span>
-                          <span className="text-xs text-muted-foreground">{format(day.date, 'MMM d')}</span>
+                          <span className="block">{day.dayName}</span>
+                          <span className="text-xs text-muted-foreground">{format(new Date(day.date), 'MMM d')}</span>
                         </div>
                         
                         {PRAYER_NAMES.map(prayer => {
-                          const isCompleted = day.data[prayer];
+                          const isCompleted = day[prayer as keyof typeof day];
                           return (
-                            <div key={`${day.dateStr}-${prayer}`} className="flex justify-center">
+                            <div key={`${day.date}-${prayer}`} className="flex justify-center">
                               <div className={cn(
                                 "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
                                 isCompleted ? "bg-primary text-primary-foreground" : "bg-muted text-transparent"
@@ -176,7 +210,7 @@ export default function Dashboard() {
           <h2 className="text-xl font-serif font-bold text-foreground mb-6">Achievements</h2>
           
           <div className="grid grid-cols-2 gap-4">
-            {badgesWithIcons.map((badge) => {
+            {BADGES.map((badge) => {
               const Icon = badge.icon;
               return (
                 <div 

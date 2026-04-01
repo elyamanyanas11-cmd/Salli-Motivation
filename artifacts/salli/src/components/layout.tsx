@@ -1,16 +1,29 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { BookOpen, Compass, Home, LayoutDashboard, Menu, X } from "lucide-react";
+import { BookOpen, Compass, Home, LayoutDashboard, Menu, X, User, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { useLogout } from "@workspace/api-client-react";
+import { Button } from "@/components/ui/button";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const logoutMutation = useLogout();
 
   // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location]);
+
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        window.location.href = "/";
+      }
+    });
+  };
 
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
@@ -51,6 +64,41 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
+            
+            <div className="h-6 w-px bg-border mx-2"></div>
+            
+            {isAuthenticated && user ? (
+              <>
+                <Link
+                  href="/profile"
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2",
+                    location === "/profile"
+                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  <User className="w-4 h-4" />
+                  {user.displayName}
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 rounded-full text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-300 flex items-center gap-2"
+                  data-testid="button-logout"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Log out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-full text-sm font-medium bg-secondary/10 text-secondary-foreground hover:bg-secondary/20 transition-all duration-300"
+                data-testid="link-login-nav"
+              >
+                Log in
+              </Link>
+            )}
           </nav>
 
           {/* Mobile Menu Toggle */}
@@ -90,6 +138,39 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+          
+          <div className="h-px w-full bg-border my-2"></div>
+          
+          {isAuthenticated && user ? (
+            <>
+              <Link
+                href="/profile"
+                className={cn(
+                  "p-4 rounded-xl text-base font-medium transition-all flex items-center gap-3",
+                  location === "/profile"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                <User className="w-5 h-5" />
+                Profile
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="p-4 rounded-xl text-base font-medium text-destructive hover:bg-destructive/10 transition-all flex items-center gap-3 text-left"
+              >
+                <LogOut className="w-5 h-5" />
+                Log out
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="p-4 rounded-xl text-base font-medium bg-secondary/10 text-secondary-foreground hover:bg-secondary/20 transition-all text-center mt-2"
+            >
+              Log in
+            </Link>
+          )}
         </nav>
       </div>
 

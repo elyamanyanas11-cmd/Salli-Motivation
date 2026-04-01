@@ -7,6 +7,9 @@ import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import Khushoo from "@/pages/khushoo";
 import Motivation from "@/pages/motivation";
+import Login from "@/pages/login";
+import Register from "@/pages/register";
+import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -19,6 +22,9 @@ function Router() {
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/khushoo" component={Khushoo} />
         <Route path="/motivation" component={Motivation} />
+        <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
+        <Route path="/profile" component={Profile} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

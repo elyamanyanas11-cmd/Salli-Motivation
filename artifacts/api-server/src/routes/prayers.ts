@@ -103,12 +103,7 @@ router.get("/prayers/week", async (req, res): Promise<void> => {
   const logs = await db
     .select()
     .from(prayerLogsTable)
-    .where(
-      and(
-        eq(prayerLogsTable.userId, userId),
-        // date in range
-      )
-    );
+    .where(eq(prayerLogsTable.userId, userId));
 
   const logMap = new Map(logs.map((l) => [l.date, l]));
 
