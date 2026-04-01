@@ -1,22 +1,26 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Salli Islamic Prayer App API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: prayers
+    description: Prayer tracking operations
+  - name: users
+    description: User profile operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +28,244 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "400":
+          description: Validation error or email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out
+      responses:
+        "200":
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/profile:
+    patch:
+      operationId: updateProfile
+      tags: [users]
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /prayers/{date}:
+    get:
+      operationId: getPrayerDay
+      tags: [prayers]
+      summary: Get prayer completion for a specific date
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            description: "Date in YYYY-MM-DD format"
+      responses:
+        "200":
+          description: Prayer day data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrayerDay"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /prayers/{date}/{prayer}:
+    post:
+      operationId: markPrayer
+      tags: [prayers]
+      summary: Mark a prayer as completed
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: prayer
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [fajr, dhuhr, asr, maghrib, isha]
+      responses:
+        "200":
+          description: Prayer marked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrayerDay"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: unmarkPrayer
+      tags: [prayers]
+      summary: Unmark a prayer (set as not completed)
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: prayer
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [fajr, dhuhr, asr, maghrib, isha]
+      responses:
+        "200":
+          description: Prayer unmarked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrayerDay"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /prayers/week:
+    get:
+      operationId: getWeeklyPrayers
+      tags: [prayers]
+      summary: Get prayer data for the current week (Mon-Sun)
+      responses:
+        "200":
+          description: Weekly prayer data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyPrayers"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /prayers/stats:
+    get:
+      operationId: getPrayerStats
+      tags: [prayers]
+      summary: Get streak, total, and weekly statistics
+      responses:
+        "200":
+          description: Prayer statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrayerStats"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +276,168 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    RegisterBody:
+      type: object
+      properties:
+        displayName:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+      required:
+        - displayName
+        - email
+        - password
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        displayName:
+          type: string
+          minLength: 2
+        city:
+          type: ["string", "null"]
+      required:
+        - displayName
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        displayName:
+          type: string
+        email:
+          type: string
+        city:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - displayName
+        - email
+        - createdAt
+
+    PrayerDay:
+      type: object
+      properties:
+        date:
+          type: string
+        fajr:
+          type: boolean
+        dhuhr:
+          type: boolean
+        asr:
+          type: boolean
+        maghrib:
+          type: boolean
+        isha:
+          type: boolean
+        completedCount:
+          type: integer
+      required:
+        - date
+        - fajr
+        - dhuhr
+        - asr
+        - maghrib
+        - isha
+        - completedCount
+
+    WeeklyPrayerDay:
+      type: object
+      properties:
+        date:
+          type: string
+        dayName:
+          type: string
+        fajr:
+          type: boolean
+        dhuhr:
+          type: boolean
+        asr:
+          type: boolean
+        maghrib:
+          type: boolean
+        isha:
+          type: boolean
+        completedCount:
+          type: integer
+        isToday:
+          type: boolean
+      required:
+        - date
+        - dayName
+        - fajr
+        - dhuhr
+        - asr
+        - maghrib
+        - isha
+        - completedCount
+        - isToday
+
+    WeeklyPrayers:
+      type: object
+      properties:
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/WeeklyPrayerDay"
+        weeklyTotal:
+          type: integer
+        weeklyPercentage:
+          type: number
+      required:
+        - days
+        - weeklyTotal
+        - weeklyPercentage
+
+    PrayerStats:
+      type: object
+      properties:
+        currentStreak:
+          type: integer
+        totalPrayers:
+          type: integer
+        weeklyTotal:
+          type: integer
+        weeklyPercentage:
+          type: number
+      required:
+        - currentStreak
+        - totalPrayers
+        - weeklyTotal
+        - weeklyPercentage
