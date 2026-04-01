@@ -58,10 +58,11 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   req.session.save((err) => {
     if (err) {
       req.log.error({ err }, "Session save error");
+      res.status(500).json({ error: "Failed to create session." });
+      return;
     }
+    res.status(201).json(toAuthUser(user));
   });
-
-  res.status(201).json(toAuthUser(user));
 });
 
 // POST /api/auth/login
@@ -94,10 +95,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   req.session.save((err) => {
     if (err) {
       req.log.error({ err }, "Session save error");
+      res.status(500).json({ error: "Failed to create session." });
+      return;
     }
+    res.json(toAuthUser(user));
   });
-
-  res.json(toAuthUser(user));
 });
 
 // POST /api/auth/logout
@@ -106,8 +108,8 @@ router.post("/auth/logout", (req, res): void => {
     if (err) {
       req.log.error({ err }, "Session destroy error");
     }
+    res.json({ success: true });
   });
-  res.json({ success: true });
 });
 
 // GET /api/auth/me
