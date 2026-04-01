@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Check, ChevronRight, Moon, Sun, Sunrise, Sunset, Compass } from "lucide-react";
+import { HadithCarousel } from "@/components/hadith-carousel";
 import { format } from "date-fns";
 import { useGetPrayerDay, useMarkPrayer, useUnmarkPrayer, getGetPrayerDayQueryKey, getGetWeeklyPrayersQueryKey, getGetPrayerStatsQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -9,6 +10,7 @@ import { getPrayerCountdown, PRAYER_NAMES, getPrayerDisplayName, PRAYER_SCHEDULE
 import { getDailyMotivation } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/language-context";
 
 const ICONS = {
   fajr: Sunrise,
@@ -20,6 +22,7 @@ const ICONS = {
 
 export default function Home() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { language } = useLanguage();
   const [now, setNow] = useState(new Date());
   const queryClient = useQueryClient();
   
@@ -73,14 +76,16 @@ export default function Home() {
         
         <div className="absolute inset-0 flex flex-col items-center justify-end p-6 md:p-12 text-center">
           <h1 className="text-3xl md:text-5xl font-serif font-bold text-foreground mb-3 animate-in slide-in-from-bottom-4 duration-700">
-            As-salamu alaykum{user ? `, ${user.displayName}` : ''}
+            {language === "ar" ? "السلام عليكم" : "As-salamu alaykum"}{user ? `، ${user.displayName}` : ''}
           </h1>
           <p className="text-muted-foreground text-sm md:text-lg max-w-md mx-auto mb-6 animate-in slide-in-from-bottom-5 duration-700 delay-100">
-            Never miss a prayer again. A quiet companion for your daily devotion.
+            {language === "ar"
+              ? "لا تفوّت صلاةً أبداً. رفيقك الهادئ لعبادتك اليومية."
+              : "Never miss a prayer again. A quiet companion for your daily devotion."}
           </p>
           <Link href="/dashboard" className="animate-in slide-in-from-bottom-6 duration-700 delay-200">
             <button className="bg-primary text-primary-foreground px-6 py-3 rounded-full font-medium hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/25" data-testid="button-start-now">
-              View Your Progress
+              {language === "ar" ? "تتبع صلواتك" : "View Your Progress"}
             </button>
           </Link>
         </div>
@@ -218,6 +223,9 @@ export default function Home() {
           )}
         </section>
       </div>
+
+      {/* Hadith Carousel */}
+      <HadithCarousel />
 
       {/* Daily Reason */}
       <section className="glass rounded-3xl p-6 md:p-8 border border-secondary/20 relative overflow-hidden group">

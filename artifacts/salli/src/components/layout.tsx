@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { BookOpen, Compass, Home, LayoutDashboard, Menu, X, User, LogOut, Users, HandHeart, Languages } from "lucide-react";
+import { BookOpen, Compass, Home, LayoutDashboard, Menu, X, User, LogOut, Users, HandHeart, Languages, MessageSquare } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLogout } from "@workspace/api-client-react";
@@ -36,6 +36,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/doaas", label: t.nav.doaas, icon: HandHeart },
     { href: "/khushoo", label: t.nav.khushoo, icon: Compass },
     { href: "/motivation", label: t.nav.motivation, icon: BookOpen },
+    { href: "/ai-chat", label: t.nav.aiChat, icon: MessageSquare },
   ];
 
   return (

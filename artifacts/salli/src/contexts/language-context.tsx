@@ -16,7 +16,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem("salli-language");
       if (saved === "ar" || saved === "en") return saved;
     } catch {}
-    return "en";
+    return "ar";
   });
 
   const isRTL = language === "ar";

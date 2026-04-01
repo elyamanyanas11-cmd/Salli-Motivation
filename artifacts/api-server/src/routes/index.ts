@@ -4,6 +4,7 @@ import authRouter from "./auth";
 import usersRouter from "./users";
 import prayersRouter from "./prayers";
 import leaderboardRouter from "./leaderboard";
+import openaiRouter from "./openai";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(authRouter);
 router.use(usersRouter);
 router.use(prayersRouter);
 router.use(leaderboardRouter);
+router.use(openaiRouter);
 
 export default router;
