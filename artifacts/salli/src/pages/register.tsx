@@ -1,20 +1,21 @@
-import { useState } from "react";
-import { useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { Link } from "wouter";
 import { useRegister } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Compass } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/language-context";
+import { cn } from "@/lib/utils";
 
 const registerSchema = z.object({
   displayName: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string()
+  confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -23,18 +24,13 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function Register() {
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t, isRTL } = useLanguage();
   const registerMutation = useRegister();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: {
-      displayName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+    defaultValues: { displayName: "", email: "", password: "", confirmPassword: "" },
   });
 
   const onSubmit = (data: RegisterFormValues) => {
@@ -45,9 +41,12 @@ export default function Register() {
           window.location.href = "/";
         },
         onError: (error) => {
+          const message =
+            (error as { data?: { error?: string } })?.data?.error ||
+            "An error occurred";
           toast({
-            title: "Registration failed",
-            description: error.data?.error || "An error occurred",
+            title: t.auth.registrationFailed,
+            description: message,
             variant: "destructive",
           });
         },
@@ -63,22 +62,22 @@ export default function Register() {
             <Compass className="w-6 h-6" />
           </div>
           <h2 className="mt-2 text-3xl font-serif font-bold tracking-tight text-foreground">
-            Create an account
+            {t.auth.registerTitle}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Begin your journey with Salli
+            {t.auth.registerSubtitle}
           </p>
         </div>
 
         <form className="mt-8 space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
           <div>
-            <Label htmlFor="displayName">Name</Label>
+            <Label htmlFor="displayName">{t.auth.name}</Label>
             <Input
               id="displayName"
               type="text"
               autoComplete="name"
               required
-              className="mt-1"
+              className={cn("mt-1", isRTL && "text-right")}
               data-testid="input-display-name"
               {...form.register("displayName")}
             />
@@ -88,13 +87,13 @@ export default function Register() {
           </div>
 
           <div>
-            <Label htmlFor="email">Email address</Label>
+            <Label htmlFor="email">{t.auth.email}</Label>
             <Input
               id="email"
               type="email"
               autoComplete="email"
               required
-              className="mt-1"
+              className={cn("mt-1", isRTL && "text-right")}
               data-testid="input-email"
               {...form.register("email")}
             />
@@ -104,13 +103,13 @@ export default function Register() {
           </div>
 
           <div>
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t.auth.password}</Label>
             <Input
               id="password"
               type="password"
               autoComplete="new-password"
               required
-              className="mt-1"
+              className={cn("mt-1", isRTL && "text-right")}
               data-testid="input-password"
               {...form.register("password")}
             />
@@ -120,13 +119,13 @@ export default function Register() {
           </div>
 
           <div>
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Label htmlFor="confirmPassword">{t.auth.confirmPassword}</Label>
             <Input
               id="confirmPassword"
               type="password"
               autoComplete="new-password"
               required
-              className="mt-1"
+              className={cn("mt-1", isRTL && "text-right")}
               data-testid="input-confirm-password"
               {...form.register("confirmPassword")}
             />
@@ -141,13 +140,13 @@ export default function Register() {
             disabled={registerMutation.isPending}
             data-testid="button-register"
           >
-            {registerMutation.isPending ? "Creating account..." : "Create Account"}
+            {registerMutation.isPending ? t.auth.registering : t.auth.registerButton}
           </Button>
 
           <div className="text-center text-sm pt-4">
-            <span className="text-muted-foreground">Already have an account? </span>
+            <span className="text-muted-foreground">{t.auth.hasAccount} </span>
             <Link href="/login" className="font-medium text-primary hover:text-primary/80" data-testid="link-login">
-              Log in
+              {t.nav.login}
             </Link>
           </div>
         </form>

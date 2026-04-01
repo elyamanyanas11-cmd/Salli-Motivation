@@ -1,18 +1,18 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { BookOpen, Compass, Home, LayoutDashboard, Menu, X, User, LogOut, Users } from "lucide-react";
+import { BookOpen, Compass, Home, LayoutDashboard, Menu, X, User, LogOut, Users, HandHeart, Languages } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLogout } from "@workspace/api-client-react";
-import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/language-context";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, isAuthenticated } = useAuth();
   const logoutMutation = useLogout();
+  const { t, language, setLanguage, isRTL } = useLanguage();
 
-  // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location]);
@@ -25,16 +25,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const toggleLanguage = () => {
+    setLanguage(language === "en" ? "ar" : "en");
+  };
+
   const navLinks = [
-    { href: "/", label: "Home", icon: Home },
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/community", label: "Community", icon: Users },
-    { href: "/khushoo", label: "Khushu'", icon: Compass },
-    { href: "/motivation", label: "Motivation", icon: BookOpen },
+    { href: "/", label: t.nav.home, icon: Home },
+    { href: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard },
+    { href: "/community", label: t.nav.community, icon: Users },
+    { href: "/doaas", label: t.nav.doaas, icon: HandHeart },
+    { href: "/khushoo", label: t.nav.khushoo, icon: Compass },
+    { href: "/motivation", label: t.nav.motivation, icon: BookOpen },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
+    <div className={cn("min-h-screen flex flex-col bg-background selection:bg-primary/20", isRTL && "font-arabic")} dir={isRTL ? "rtl" : "ltr"}>
       <header className="sticky top-0 z-50 glass border-b border-border/50">
         <div className="container max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
@@ -54,7 +59,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2",
+                    "px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-1.5",
                     isActive
                       ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -65,15 +70,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
-            
-            <div className="h-6 w-px bg-border mx-2"></div>
-            
+
+            <div className="h-6 w-px bg-border mx-1"></div>
+
+            <button
+              onClick={toggleLanguage}
+              title={language === "en" ? "Switch to Arabic" : "التبديل إلى الإنجليزية"}
+              className="px-3 py-2 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-300 flex items-center gap-1.5"
+            >
+              <Languages className="w-4 h-4" />
+              <span>{language === "en" ? "عربي" : "EN"}</span>
+            </button>
+
+            <div className="h-6 w-px bg-border mx-1"></div>
+
             {isAuthenticated && user ? (
               <>
                 <Link
                   href="/profile"
                   className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2",
+                    "px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-1.5",
                     location === "/profile"
                       ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -84,31 +100,40 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="px-4 py-2 rounded-full text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-300 flex items-center gap-2"
+                  className="px-3 py-2 rounded-full text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-300 flex items-center gap-1.5"
                   data-testid="button-logout"
                 >
                   <LogOut className="w-4 h-4" />
-                  Log out
+                  {t.nav.logout}
                 </button>
               </>
             ) : (
               <Link
                 href="/login"
-                className="px-4 py-2 rounded-full text-sm font-medium bg-secondary/10 text-secondary-foreground hover:bg-secondary/20 transition-all duration-300"
+                className="px-3 py-2 rounded-full text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300"
                 data-testid="link-login-nav"
               >
-                Log in
+                {t.nav.login}
               </Link>
             )}
           </nav>
 
-          {/* Mobile Menu Toggle */}
-          <button
-            className="md:hidden p-2 text-foreground"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          {/* Mobile: language toggle + menu */}
+          <div className="md:hidden flex items-center gap-2">
+            <button
+              onClick={toggleLanguage}
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+              title={language === "en" ? "Switch to Arabic" : "التبديل إلى الإنجليزية"}
+            >
+              <Languages className="w-5 h-5" />
+            </button>
+            <button
+              className="p-2 text-foreground"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -139,9 +164,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
-          
+
           <div className="h-px w-full bg-border my-2"></div>
-          
+
           {isAuthenticated && user ? (
             <>
               <Link
@@ -154,22 +179,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <User className="w-5 h-5" />
-                Profile
+                {t.nav.profile}
               </Link>
               <button
                 onClick={handleLogout}
                 className="p-4 rounded-xl text-base font-medium text-destructive hover:bg-destructive/10 transition-all flex items-center gap-3 text-left"
               >
                 <LogOut className="w-5 h-5" />
-                Log out
+                {t.nav.logout}
               </button>
             </>
           ) : (
             <Link
               href="/login"
-              className="p-4 rounded-xl text-base font-medium bg-secondary/10 text-secondary-foreground hover:bg-secondary/20 transition-all text-center mt-2"
+              className="p-4 rounded-xl text-base font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all text-center mt-2"
             >
-              Log in
+              {t.nav.login}
             </Link>
           )}
         </nav>
@@ -180,7 +205,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       <footer className="mt-auto py-8 border-t border-border/50 text-center text-sm text-muted-foreground">
-        <p className="font-serif">Salli — Your digital prayer companion.</p>
+        <p className="font-serif">Salli — {isRTL ? "رفيقك الرقمي للصلاة" : "Your digital prayer companion."}</p>
       </footer>
     </div>
   );

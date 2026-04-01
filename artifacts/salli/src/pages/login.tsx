@@ -1,14 +1,15 @@
-import { useState } from "react";
-import { useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { Link } from "wouter";
 import { useLogin } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Compass } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/language-context";
+import { cn } from "@/lib/utils";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -18,16 +19,13 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t, isRTL } = useLanguage();
   const loginMutation = useLogin();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "" },
   });
 
   const onSubmit = (data: LoginFormValues) => {
@@ -38,9 +36,12 @@ export default function Login() {
           window.location.href = "/";
         },
         onError: (error) => {
+          const message =
+            (error as { data?: { error?: string } })?.data?.error ||
+            t.auth.invalidCredentials;
           toast({
-            title: "Login failed",
-            description: error.data?.error || "Invalid credentials",
+            title: t.auth.loginFailed,
+            description: message,
             variant: "destructive",
           });
         },
@@ -56,44 +57,48 @@ export default function Login() {
             <Compass className="w-6 h-6" />
           </div>
           <h2 className="mt-2 text-3xl font-serif font-bold tracking-tight text-foreground">
-            Welcome back
+            {t.auth.loginTitle}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Log in to continue your journey
+            {t.auth.loginSubtitle}
           </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="email">Email address</Label>
+              <Label htmlFor="email">{t.auth.email}</Label>
               <Input
                 id="email"
                 type="email"
                 autoComplete="email"
                 required
-                className="mt-1"
+                className={cn("mt-1", isRTL && "text-right")}
                 data-testid="input-email"
                 {...form.register("email")}
               />
               {form.formState.errors.email && (
-                <p className="text-sm text-destructive mt-1">{form.formState.errors.email.message}</p>
+                <p className="text-sm text-destructive mt-1">
+                  {form.formState.errors.email.message}
+                </p>
               )}
             </div>
 
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t.auth.password}</Label>
               <Input
                 id="password"
                 type="password"
                 autoComplete="current-password"
                 required
-                className="mt-1"
+                className={cn("mt-1", isRTL && "text-right")}
                 data-testid="input-password"
                 {...form.register("password")}
               />
               {form.formState.errors.password && (
-                <p className="text-sm text-destructive mt-1">{form.formState.errors.password.message}</p>
+                <p className="text-sm text-destructive mt-1">
+                  {form.formState.errors.password.message}
+                </p>
               )}
             </div>
           </div>
@@ -104,13 +109,17 @@ export default function Login() {
             disabled={loginMutation.isPending}
             data-testid="button-login"
           >
-            {loginMutation.isPending ? "Logging in..." : "Log in"}
+            {loginMutation.isPending ? t.auth.loggingIn : t.auth.loginButton}
           </Button>
 
           <div className="text-center text-sm">
-            <span className="text-muted-foreground">Don't have an account? </span>
-            <Link href="/register" className="font-medium text-primary hover:text-primary/80" data-testid="link-register">
-              Create an account
+            <span className="text-muted-foreground">{t.auth.noAccount} </span>
+            <Link
+              href="/register"
+              className="font-medium text-primary hover:text-primary/80"
+              data-testid="link-register"
+            >
+              {t.auth.createAccount}
             </Link>
           </div>
         </form>
