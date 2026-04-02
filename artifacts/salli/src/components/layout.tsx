@@ -1,9 +1,9 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { BookOpen, Compass, Home, LayoutDashboard, Menu, X, User, LogOut, Users, HandHeart, Languages, MessageSquare } from "lucide-react";
+import { BookOpen, Compass, Home, LayoutDashboard, Menu, X, User, LogOut, Users, HandHeart, Languages, MessageSquare, UserPlus, Inbox } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useLogout } from "@workspace/api-client-react";
+import { useLogout, useGetNotificationsCount } from "@workspace/api-client-react";
 import { useLanguage } from "@/contexts/language-context";
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -12,6 +12,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuth();
   const logoutMutation = useLogout();
   const { t, language, setLanguage, isRTL } = useLanguage();
+
+  const { data: notifCount } = useGetNotificationsCount({
+    query: {
+      enabled: isAuthenticated,
+      refetchInterval: 30000,
+    },
+  });
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -38,6 +45,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/motivation", label: t.nav.motivation, icon: BookOpen },
     { href: "/ai-chat", label: t.nav.aiChat, icon: MessageSquare },
   ];
+
+  const socialLinks = isAuthenticated
+    ? [
+        {
+          href: "/social",
+          label: t.nav.social,
+          icon: UserPlus,
+          badge: notifCount?.pendingRequests || 0,
+        },
+        {
+          href: "/messages",
+          label: t.nav.messages,
+          icon: Inbox,
+          badge: notifCount?.unreadMessages || 0,
+        },
+      ]
+    : [];
 
   return (
     <div className={cn("min-h-screen flex flex-col bg-background selection:bg-primary/20", isRTL && "font-arabic")} dir={isRTL ? "rtl" : "ltr"}>
@@ -68,6 +92,31 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 >
                   <Icon className="w-4 h-4" />
                   {link.label}
+                </Link>
+              );
+            })}
+
+            {socialLinks.map((link) => {
+              const isActive = location.startsWith(link.href);
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "relative px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-1.5",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  {link.label}
+                  {link.badge > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                      {link.badge > 9 ? "9+" : link.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -121,6 +170,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Mobile: language toggle + menu */}
           <div className="md:hidden flex items-center gap-2">
+            {isAuthenticated && (notifCount?.pendingRequests || 0) + (notifCount?.unreadMessages || 0) > 0 && (
+              <span className="w-2 h-2 rounded-full bg-destructive" />
+            )}
             <button
               onClick={toggleLanguage}
               className="p-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -162,6 +214,31 @@ export function Layout({ children }: { children: React.ReactNode }) {
               >
                 <Icon className="w-5 h-5" />
                 {link.label}
+              </Link>
+            );
+          })}
+
+          {socialLinks.map((link) => {
+            const isActive = location.startsWith(link.href);
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "p-4 rounded-xl text-base font-medium transition-all flex items-center gap-3",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                <Icon className="w-5 h-5" />
+                {link.label}
+                {link.badge > 0 && (
+                  <span className="ms-auto w-6 h-6 rounded-full bg-destructive text-destructive-foreground text-xs font-bold flex items-center justify-center">
+                    {link.badge > 9 ? "9+" : link.badge}
+                  </span>
+                )}
               </Link>
             );
           })}

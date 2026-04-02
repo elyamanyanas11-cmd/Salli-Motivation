@@ -11,6 +11,8 @@ import Khushoo from "@/pages/khushoo";
 import Motivation from "@/pages/motivation";
 import Doaas from "@/pages/doaas";
 import AiChat from "@/pages/ai-chat";
+import Social from "@/pages/social";
+import Messages from "@/pages/messages";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Profile from "@/pages/profile";
@@ -29,6 +31,9 @@ function Router() {
         <Route path="/motivation" component={Motivation} />
         <Route path="/doaas" component={Doaas} />
         <Route path="/ai-chat" component={AiChat} />
+        <Route path="/social" component={Social} />
+        <Route path="/messages" component={Messages} />
+        <Route path="/messages/:userId" component={Messages} />
         <Route path="/login" component={Login} />
         <Route path="/register" component={Register} />
         <Route path="/profile" component={Profile} />

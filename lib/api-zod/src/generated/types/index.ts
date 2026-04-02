@@ -8,10 +8,14 @@
 
 export * from "./authUser";
 export * from "./createOpenaiConversationBody";
+export * from "./directMessage";
 export * from "./errorResponse";
+export * from "./friendRequest";
 export * from "./healthStatus";
 export * from "./leaderboardEntry";
 export * from "./loginBody";
+export * from "./messageThread";
+export * from "./notificationsCount";
 export * from "./openaiConversation";
 export * from "./openaiConversationWithMessages";
 export * from "./openaiError";
@@ -19,7 +23,11 @@ export * from "./openaiMessage";
 export * from "./prayerDay";
 export * from "./prayerStats";
 export * from "./registerBody";
+export * from "./searchUsersParams";
+export * from "./sendDirectMessageBody";
 export * from "./sendOpenaiMessageBody";
+export * from "./socialUser";
+export * from "./socialUserFriendshipStatus";
 export * from "./successResponse";
 export * from "./updateProfileBody";
 export * from "./weeklyPrayerDay";

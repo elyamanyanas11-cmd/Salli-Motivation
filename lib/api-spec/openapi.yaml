@@ -17,6 +17,8 @@ tags:
     description: User profile operations
   - name: openai
     description: OpenAI AI chat, image, and audio operations
+  - name: social
+    description: Friends, user search, and direct messaging
 paths:
   /healthz:
     get:
@@ -289,6 +291,302 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /social/users/search:
+    get:
+      operationId: searchUsers
+      tags: [social]
+      summary: Search users by username
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SocialUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /social/friends:
+    get:
+      operationId: listFriends
+      tags: [social]
+      summary: List accepted friends
+      responses:
+        "200":
+          description: Friends list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SocialUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /social/friends/requests:
+    get:
+      operationId: listFriendRequests
+      tags: [social]
+      summary: List incoming pending friend requests
+      responses:
+        "200":
+          description: Incoming requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FriendRequest"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /social/friends/request/{userId}:
+    post:
+      operationId: sendFriendRequest
+      tags: [social]
+      summary: Send a friend request
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Request sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Already friends or request exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /social/friends/accept/{userId}:
+    post:
+      operationId: acceptFriendRequest
+      tags: [social]
+      summary: Accept a friend request
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /social/friends/decline/{userId}:
+    post:
+      operationId: declineFriendRequest
+      tags: [social]
+      summary: Decline a friend request
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Declined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /social/friends/{userId}:
+    delete:
+      operationId: removeFriend
+      tags: [social]
+      summary: Remove a friend or cancel a sent request
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /social/messages:
+    get:
+      operationId: listMessageThreads
+      tags: [social]
+      summary: List direct message threads (one per conversation partner)
+      responses:
+        "200":
+          description: Message threads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MessageThread"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /social/messages/{userId}:
+    get:
+      operationId: getMessageThread
+      tags: [social]
+      summary: Get all messages with a specific user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DirectMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: sendDirectMessage
+      tags: [social]
+      summary: Send a direct message to a user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendDirectMessageBody"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /social/messages/{userId}/read:
+    put:
+      operationId: markMessagesRead
+      tags: [social]
+      summary: Mark all messages from a user as read
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /social/notifications/count:
+    get:
+      operationId: getNotificationsCount
+      tags: [social]
+      summary: Get count of pending requests and unread messages
+      responses:
+        "200":
+          description: Counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationsCount"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /openai/conversations:
     get:
       operationId: listOpenaiConversations
@@ -465,6 +763,10 @@ components:
         displayName:
           type: string
           minLength: 2
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
         city:
           type: ["string", "null"]
       required:
@@ -477,6 +779,8 @@ components:
           type: integer
         displayName:
           type: string
+        username:
+          type: ["string", "null"]
         email:
           type: string
         city:
@@ -580,6 +884,98 @@ components:
         - totalPrayers
         - weeklyTotal
         - weeklyPercentage
+
+    SocialUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        displayName:
+          type: string
+        username:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        friendshipStatus:
+          type: string
+          enum: [none, pending_sent, pending_received, friends]
+      required:
+        - id
+        - displayName
+        - friendshipStatus
+
+    FriendRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        user:
+          $ref: "#/components/schemas/SocialUser"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - user
+        - createdAt
+
+    DirectMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        senderId:
+          type: integer
+        receiverId:
+          type: integer
+        content:
+          type: string
+        readAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - senderId
+        - receiverId
+        - content
+        - createdAt
+
+    MessageThread:
+      type: object
+      properties:
+        partner:
+          $ref: "#/components/schemas/SocialUser"
+        lastMessage:
+          $ref: "#/components/schemas/DirectMessage"
+        unreadCount:
+          type: integer
+      required:
+        - partner
+        - lastMessage
+        - unreadCount
+
+    SendDirectMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+          minLength: 1
+      required:
+        - content
+
+    NotificationsCount:
+      type: object
+      properties:
+        pendingRequests:
+          type: integer
+        unreadMessages:
+          type: integer
+      required:
+        - pendingRequests
+        - unreadMessages
 
     OpenaiConversation:
       type: object

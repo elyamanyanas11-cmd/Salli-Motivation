@@ -33,6 +33,11 @@ export interface LoginBody {
 export interface UpdateProfileBody {
   /** @minLength 2 */
   displayName: string;
+  /**
+   * @minLength 3
+   * @maxLength 30
+   */
+  username?: string;
   /** @nullable */
   city?: string | null;
 }
@@ -40,6 +45,8 @@ export interface UpdateProfileBody {
 export interface AuthUser {
   id: number;
   displayName: string;
+  /** @nullable */
+  username?: string | null;
   email: string;
   /** @nullable */
   city?: string | null;
@@ -79,6 +86,58 @@ export interface PrayerStats {
   totalPrayers: number;
   weeklyTotal: number;
   weeklyPercentage: number;
+}
+
+export type SocialUserFriendshipStatus =
+  (typeof SocialUserFriendshipStatus)[keyof typeof SocialUserFriendshipStatus];
+
+export const SocialUserFriendshipStatus = {
+  none: "none",
+  pending_sent: "pending_sent",
+  pending_received: "pending_received",
+  friends: "friends",
+} as const;
+
+export interface SocialUser {
+  id: number;
+  displayName: string;
+  /** @nullable */
+  username?: string | null;
+  /** @nullable */
+  city?: string | null;
+  friendshipStatus: SocialUserFriendshipStatus;
+}
+
+export interface FriendRequest {
+  id: number;
+  user: SocialUser;
+  createdAt: string;
+}
+
+export interface DirectMessage {
+  id: number;
+  senderId: number;
+  receiverId: number;
+  content: string;
+  /** @nullable */
+  readAt?: string | null;
+  createdAt: string;
+}
+
+export interface MessageThread {
+  partner: SocialUser;
+  lastMessage: DirectMessage;
+  unreadCount: number;
+}
+
+export interface SendDirectMessageBody {
+  /** @minLength 1 */
+  content: string;
+}
+
+export interface NotificationsCount {
+  pendingRequests: number;
+  unreadMessages: number;
 }
 
 export interface OpenaiConversation {
@@ -125,3 +184,7 @@ export interface LeaderboardEntry {
   isCurrentUser: boolean;
   rank: number;
 }
+
+export type SearchUsersParams = {
+  q: string;
+};

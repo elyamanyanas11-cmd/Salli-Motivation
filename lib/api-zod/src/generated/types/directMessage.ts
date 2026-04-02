@@ -6,13 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AuthUser {
+export interface DirectMessage {
   id: number;
-  displayName: string;
+  senderId: number;
+  receiverId: number;
+  content: string;
   /** @nullable */
-  username?: string | null;
-  email: string;
-  /** @nullable */
-  city?: string | null;
+  readAt?: Date | null;
   createdAt: Date;
 }

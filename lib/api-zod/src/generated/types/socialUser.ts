@@ -5,14 +5,14 @@
  * Salli Islamic Prayer App API
  * OpenAPI spec version: 0.1.0
  */
+import type { SocialUserFriendshipStatus } from "./socialUserFriendshipStatus";
 
-export interface AuthUser {
+export interface SocialUser {
   id: number;
   displayName: string;
   /** @nullable */
   username?: string | null;
-  email: string;
   /** @nullable */
   city?: string | null;
-  createdAt: Date;
+  friendshipStatus: SocialUserFriendshipStatus;
 }

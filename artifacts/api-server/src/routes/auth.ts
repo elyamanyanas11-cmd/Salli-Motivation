@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import bcryptjs from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import {
   RegisterBody,
@@ -11,14 +11,41 @@ const router: IRouter = Router();
 
 const SALT_ROUNDS = 12;
 
-function toAuthUser(user: { id: number; displayName: string; email: string; city: string | null; createdAt: Date }) {
+function toAuthUser(user: { id: number; displayName: string; username?: string | null; email: string; city: string | null; createdAt: Date }) {
   return {
     id: user.id,
     displayName: user.displayName,
+    username: user.username ?? null,
     email: user.email,
     city: user.city ?? null,
     createdAt: user.createdAt.toISOString(),
   };
+}
+
+async function generateUniqueUsername(base: string): Promise<string> {
+  const slug = base
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .slice(0, 25) || "user";
+
+  const [existing] = await db
+    .select({ username: usersTable.username })
+    .from(usersTable)
+    .where(ilike(usersTable.username, slug));
+
+  if (!existing) return slug;
+
+  // Try appending numbers
+  for (let i = 1; i <= 9999; i++) {
+    const candidate = `${slug}${i}`;
+    const [dup] = await db
+      .select({ username: usersTable.username })
+      .from(usersTable)
+      .where(ilike(usersTable.username, candidate));
+    if (!dup) return candidate;
+  }
+  return `${slug}_${Date.now()}`;
 }
 
 // POST /api/auth/register
@@ -42,13 +69,15 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }
 
   const passwordHash = await bcryptjs.hash(password, SALT_ROUNDS);
+  const username = await generateUniqueUsername(displayName);
 
   const [user] = await db
     .insert(usersTable)
-    .values({ displayName, email: email.toLowerCase(), passwordHash })
+    .values({ displayName, email: email.toLowerCase(), passwordHash, username })
     .returning({
       id: usersTable.id,
       displayName: usersTable.displayName,
+      username: usersTable.username,
       email: usersTable.email,
       city: usersTable.city,
       createdAt: usersTable.createdAt,
@@ -122,6 +151,7 @@ router.get("/auth/me", (req, res): void => {
   res.json({
     id: u.id,
     displayName: u.displayName,
+    username: u.username ?? null,
     email: u.email,
     city: u.city ?? null,
     createdAt: u.createdAt.toISOString(),

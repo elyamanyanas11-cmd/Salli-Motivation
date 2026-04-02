@@ -9,6 +9,11 @@
 export interface UpdateProfileBody {
   /** @minLength 2 */
   displayName: string;
+  /**
+   * @minLength 3
+   * @maxLength 30
+   */
+  username?: string;
   /** @nullable */
   city?: string | null;
 }

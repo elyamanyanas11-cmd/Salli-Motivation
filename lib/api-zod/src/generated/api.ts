@@ -38,6 +38,7 @@ export const LoginBody = zod.object({
 export const LoginResponse = zod.object({
   id: zod.number(),
   displayName: zod.string(),
+  username: zod.string().nullish(),
   email: zod.string(),
   city: zod.string().nullish(),
   createdAt: zod.coerce.date(),
@@ -56,6 +57,7 @@ export const LogoutResponse = zod.object({
 export const GetMeResponse = zod.object({
   id: zod.number(),
   displayName: zod.string(),
+  username: zod.string().nullish(),
   email: zod.string(),
   city: zod.string().nullish(),
   createdAt: zod.coerce.date(),
@@ -66,14 +68,23 @@ export const GetMeResponse = zod.object({
  */
 export const updateProfileBodyDisplayNameMin = 2;
 
+export const updateProfileBodyUsernameMin = 3;
+export const updateProfileBodyUsernameMax = 30;
+
 export const UpdateProfileBody = zod.object({
   displayName: zod.string().min(updateProfileBodyDisplayNameMin),
+  username: zod
+    .string()
+    .min(updateProfileBodyUsernameMin)
+    .max(updateProfileBodyUsernameMax)
+    .optional(),
   city: zod.string().nullish(),
 });
 
 export const UpdateProfileResponse = zod.object({
   id: zod.number(),
   displayName: zod.string(),
+  username: zod.string().nullish(),
   email: zod.string(),
   city: zod.string().nullish(),
   createdAt: zod.coerce.date(),
@@ -176,6 +187,188 @@ export const GetPrayerStatsResponse = zod.object({
   totalPrayers: zod.number(),
   weeklyTotal: zod.number(),
   weeklyPercentage: zod.number(),
+});
+
+/**
+ * @summary Search users by username
+ */
+export const SearchUsersQueryParams = zod.object({
+  q: zod.coerce.string(),
+});
+
+export const SearchUsersResponseItem = zod.object({
+  id: zod.number(),
+  displayName: zod.string(),
+  username: zod.string().nullish(),
+  city: zod.string().nullish(),
+  friendshipStatus: zod.enum([
+    "none",
+    "pending_sent",
+    "pending_received",
+    "friends",
+  ]),
+});
+export const SearchUsersResponse = zod.array(SearchUsersResponseItem);
+
+/**
+ * @summary List accepted friends
+ */
+export const ListFriendsResponseItem = zod.object({
+  id: zod.number(),
+  displayName: zod.string(),
+  username: zod.string().nullish(),
+  city: zod.string().nullish(),
+  friendshipStatus: zod.enum([
+    "none",
+    "pending_sent",
+    "pending_received",
+    "friends",
+  ]),
+});
+export const ListFriendsResponse = zod.array(ListFriendsResponseItem);
+
+/**
+ * @summary List incoming pending friend requests
+ */
+export const ListFriendRequestsResponseItem = zod.object({
+  id: zod.number(),
+  user: zod.object({
+    id: zod.number(),
+    displayName: zod.string(),
+    username: zod.string().nullish(),
+    city: zod.string().nullish(),
+    friendshipStatus: zod.enum([
+      "none",
+      "pending_sent",
+      "pending_received",
+      "friends",
+    ]),
+  }),
+  createdAt: zod.coerce.date(),
+});
+export const ListFriendRequestsResponse = zod.array(
+  ListFriendRequestsResponseItem,
+);
+
+/**
+ * @summary Send a friend request
+ */
+export const SendFriendRequestParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const SendFriendRequestResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Accept a friend request
+ */
+export const AcceptFriendRequestParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const AcceptFriendRequestResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Decline a friend request
+ */
+export const DeclineFriendRequestParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const DeclineFriendRequestResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Remove a friend or cancel a sent request
+ */
+export const RemoveFriendParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const RemoveFriendResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary List direct message threads (one per conversation partner)
+ */
+export const ListMessageThreadsResponseItem = zod.object({
+  partner: zod.object({
+    id: zod.number(),
+    displayName: zod.string(),
+    username: zod.string().nullish(),
+    city: zod.string().nullish(),
+    friendshipStatus: zod.enum([
+      "none",
+      "pending_sent",
+      "pending_received",
+      "friends",
+    ]),
+  }),
+  lastMessage: zod.object({
+    id: zod.number(),
+    senderId: zod.number(),
+    receiverId: zod.number(),
+    content: zod.string(),
+    readAt: zod.coerce.date().nullish(),
+    createdAt: zod.coerce.date(),
+  }),
+  unreadCount: zod.number(),
+});
+export const ListMessageThreadsResponse = zod.array(
+  ListMessageThreadsResponseItem,
+);
+
+/**
+ * @summary Get all messages with a specific user
+ */
+export const GetMessageThreadParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const GetMessageThreadResponseItem = zod.object({
+  id: zod.number(),
+  senderId: zod.number(),
+  receiverId: zod.number(),
+  content: zod.string(),
+  readAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const GetMessageThreadResponse = zod.array(GetMessageThreadResponseItem);
+
+/**
+ * @summary Send a direct message to a user
+ */
+export const SendDirectMessageParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const SendDirectMessageBody = zod.object({
+  content: zod.string().min(1),
+});
+
+/**
+ * @summary Mark all messages from a user as read
+ */
+export const MarkMessagesReadParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const MarkMessagesReadResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Get count of pending requests and unread messages
+ */
+export const GetNotificationsCountResponse = zod.object({
+  pendingRequests: zod.number(),
+  unreadMessages: zod.number(),
 });
 
 /**
