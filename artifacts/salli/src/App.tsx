@@ -16,6 +16,7 @@ import Messages from "@/pages/messages";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Profile from "@/pages/profile";
+import PrayerTimesPage from "@/pages/prayer-times";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ function Router() {
         <Route path="/social" component={Social} />
         <Route path="/messages" component={Messages} />
         <Route path="/messages/:userId" component={Messages} />
+        <Route path="/prayer-times" component={PrayerTimesPage} />
         <Route path="/login" component={Login} />
         <Route path="/register" component={Register} />
         <Route path="/profile" component={Profile} />

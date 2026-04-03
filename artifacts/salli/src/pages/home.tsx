@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Check, ChevronRight, Moon, Sun, Sunrise, Sunset, Compass } from "lucide-react";
+import { Check, ChevronRight, Moon, Sun, Sunrise, Sunset, Compass, MapPin, Bell } from "lucide-react";
 import { HadithCarousel } from "@/components/hadith-carousel";
 import { format } from "date-fns";
 import { useGetPrayerDay, useMarkPrayer, useUnmarkPrayer, getGetPrayerDayQueryKey, getGetWeeklyPrayersQueryKey, getGetPrayerStatsQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQueryClient } from "@tanstack/react-query";
-import { getPrayerCountdown, PRAYER_NAMES, getPrayerDisplayName, PRAYER_SCHEDULE } from "@/lib/prayer-times";
+import { PRAYER_NAMES, getPrayerDisplayName, PRAYER_SCHEDULE } from "@/lib/prayer-times";
+import { usePrayerTimes } from "@/hooks/use-prayer-times";
+import { useNotifications } from "@/hooks/use-notifications";
 import { getDailyMotivation } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,20 +25,15 @@ const ICONS = {
 export default function Home() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { language } = useLanguage();
-  const [now, setNow] = useState(new Date());
   const queryClient = useQueryClient();
-  
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+
+  const { location, requestLocation, prayerTimes, nextPrayer, countdown, now } = usePrayerTimes();
+  const { permission, requestPermission } = useNotifications(prayerTimes);
 
   const todayStr = format(now, "yyyy-MM-dd");
   
   const { data: todayData, isLoading: isPrayersLoading } = useGetPrayerDay(todayStr, {
-    query: {
-      enabled: isAuthenticated,
-    }
+    query: { enabled: isAuthenticated }
   });
 
   const markPrayerMutation = useMarkPrayer();
@@ -44,10 +41,8 @@ export default function Home() {
 
   const togglePrayer = (prayer: keyof typeof ICONS) => {
     if (!todayData) return;
-    
     const isCompleted = todayData[prayer];
     const mutation = isCompleted ? unmarkPrayerMutation : markPrayerMutation;
-    
     mutation.mutate(
       { date: todayStr, prayer },
       {
@@ -60,7 +55,8 @@ export default function Home() {
     );
   };
 
-  const countdown = getPrayerCountdown(now);
+  const hasLocation = location.status === "granted";
+  const activeCountdown = countdown;
   const dailyReason = getDailyMotivation();
 
   return (
@@ -94,49 +90,83 @@ export default function Home() {
       <div className="grid md:grid-cols-12 gap-6">
         {/* Next Prayer Countdown */}
         <section className="md:col-span-5 relative glass rounded-3xl p-8 flex flex-col items-center justify-center text-center shadow-md">
-          <h2 className="text-lg font-medium text-muted-foreground mb-6">Next Prayer</h2>
-          
-          <div className="relative w-48 h-48 flex items-center justify-center mb-6">
-            {/* SVG Ring */}
-            <svg className="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
-              <circle 
-                cx="50" cy="50" r="46" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="4" 
-                className="text-muted opacity-30"
-              />
-              <circle 
-                cx="50" cy="50" r="46" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="4" 
-                strokeDasharray="289"
-                strokeDashoffset={289 - (289 * countdown.percentage) / 100}
-                className={cn(
-                  "text-primary transition-all duration-1000 ease-linear",
-                  countdown.totalSeconds < 1800 ? "animate-pulse text-secondary" : ""
-                )}
-                strokeLinecap="round"
-              />
-            </svg>
-            
-            <div className="flex flex-col items-center z-10">
-              <span className="text-3xl font-serif font-bold text-foreground">
-                {getPrayerDisplayName(countdown.prayer)}
+          <div className="flex items-center justify-between w-full mb-6">
+            <h2 className="text-lg font-medium text-muted-foreground">
+              {language === "ar" ? "الصلاة القادمة" : "Next Prayer"}
+            </h2>
+            {hasLocation ? (
+              <span className="flex items-center gap-1 text-xs text-green-500">
+                <MapPin className="w-3 h-3" />
+                {language === "ar" ? "بموقعك" : "By location"}
               </span>
-              <span className="text-xl font-medium text-muted-foreground mt-1 tracking-widest">
-                {countdown.hours.toString().padStart(2, '0')}:
-                {countdown.minutes.toString().padStart(2, '0')}:
-                {countdown.seconds.toString().padStart(2, '0')}
-              </span>
-            </div>
+            ) : (
+              <button
+                onClick={requestLocation}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+              >
+                <MapPin className="w-3 h-3" />
+                {language === "ar" ? "استخدم موقعك" : "Use location"}
+              </button>
+            )}
           </div>
           
-          <p className="text-sm text-muted-foreground">
-            {countdown.isTomorrow ? "Tomorrow at " : "Today at "}
-            {format(countdown.time, "h:mm a")}
-          </p>
+          {activeCountdown ? (
+            <>
+              <div className="relative w-48 h-48 flex items-center justify-center mb-6">
+                <svg className="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="4" className="text-muted opacity-30" />
+                  <circle 
+                    cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="4"
+                    strokeDasharray="289"
+                    strokeDashoffset={289 - (289 * activeCountdown.percentage) / 100}
+                    className={cn("text-primary transition-all duration-1000 ease-linear", activeCountdown.totalSeconds < 1800 ? "animate-pulse text-secondary" : "")}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="flex flex-col items-center z-10">
+                  <span className="text-3xl font-serif font-bold text-foreground">
+                    {getPrayerDisplayName(activeCountdown.prayer)}
+                  </span>
+                  <span className="text-xl font-medium text-muted-foreground mt-1 tracking-widest">
+                    {activeCountdown.hours.toString().padStart(2, '0')}:
+                    {activeCountdown.minutes.toString().padStart(2, '0')}:
+                    {activeCountdown.seconds.toString().padStart(2, '0')}
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                {activeCountdown.isTomorrow
+                  ? (language === "ar" ? "غدًا الساعة " : "Tomorrow at ")
+                  : (language === "ar" ? "اليوم الساعة " : "Today at ")}
+                {format(activeCountdown.time, "h:mm a")}
+              </p>
+              {permission !== "granted" && (
+                <button
+                  onClick={requestPermission}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Bell className="w-3 h-3" />
+                  {language === "ar" ? "تفعيل الإشعارات" : "Enable notifications"}
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-4 py-6">
+              <MapPin className="w-10 h-10 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">
+                {language === "ar" ? "شارك موقعك لأوقات الصلاة الدقيقة" : "Share your location for accurate prayer times"}
+              </p>
+              <button
+                onClick={requestLocation}
+                className="bg-primary text-primary-foreground px-5 py-2 rounded-full text-sm font-medium hover:bg-primary/90 transition-all"
+              >
+                {language === "ar" ? "استخدم موقعي" : "Use My Location"}
+              </button>
+              <Link href="/prayer-times" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+                {language === "ar" ? "عرض أوقات الصلاة" : "View prayer times"}
+              </Link>
+            </div>
+          )}
         </section>
 
         {/* Today's Tracker */}
@@ -197,7 +227,9 @@ export default function Home() {
                         </div>
                         <div>
                           <h3 className="font-medium text-foreground capitalize">{prayer}</h3>
-                          <p className="text-xs text-muted-foreground">{PRAYER_SCHEDULE[prayer]}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {prayerTimes ? format(prayerTimes[prayer], "h:mm a") : PRAYER_SCHEDULE[prayer]}
+                          </p>
                         </div>
                       </div>
                       

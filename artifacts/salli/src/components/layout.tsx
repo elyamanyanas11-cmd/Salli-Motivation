@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { BookOpen, Compass, Home, LayoutDashboard, Menu, X, User, LogOut, Users, HandHeart, Languages, MessageSquare, UserPlus, Inbox } from "lucide-react";
+import { BookOpen, Compass, Home, LayoutDashboard, Menu, X, User, LogOut, Users, HandHeart, Languages, MessageSquare, UserPlus, Inbox, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLogout, useGetNotificationsCount } from "@workspace/api-client-react";
@@ -38,6 +38,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const navLinks = [
     { href: "/", label: t.nav.home, icon: Home },
+    { href: "/prayer-times", label: language === "ar" ? "أوقات الصلاة" : "Prayer Times", icon: Clock },
     { href: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard },
     { href: "/community", label: t.nav.community, icon: Users },
     { href: "/doaas", label: t.nav.doaas, icon: HandHeart },
