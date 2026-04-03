@@ -47,7 +47,9 @@ export function getIqamaTimes(prayerTimes: Record<PrayerName, Date>): Record<Pra
 
 export function getNextPrayerFromTimes(
   prayerTimes: Record<PrayerName, Date>,
-  now: Date = new Date()
+  now: Date = new Date(),
+  lat?: number,
+  lng?: number
 ): { prayer: PrayerName; time: Date; isTomorrow: boolean } {
   for (const prayer of PRAYER_NAMES) {
     if (prayerTimes[prayer] > now) {
@@ -55,7 +57,10 @@ export function getNextPrayerFromTimes(
     }
   }
   const tomorrow = addDays(startOfDay(now), 1);
-  const tomorrowTimes = calculatePrayerTimes(0, 0, tomorrow);
+  const tomorrowTimes =
+    lat !== undefined && lng !== undefined
+      ? calculatePrayerTimes(lat, lng, tomorrow)
+      : calculatePrayerTimes(0, 0, tomorrow);
   return { prayer: 'fajr', time: tomorrowTimes.fajr, isTomorrow: true };
 }
 

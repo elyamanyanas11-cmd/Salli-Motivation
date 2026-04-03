@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLogout, useGetNotificationsCount } from "@workspace/api-client-react";
 import { useLanguage } from "@/contexts/language-context";
+import { useSocialNotifications } from "@/hooks/use-social-notifications";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -19,6 +20,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       refetchInterval: 30000,
     },
   });
+
+  useSocialNotifications(
+    notifCount?.pendingRequests ?? 0,
+    notifCount?.unreadMessages ?? 0,
+    isAuthenticated
+  );
 
   useEffect(() => {
     setIsMobileMenuOpen(false);

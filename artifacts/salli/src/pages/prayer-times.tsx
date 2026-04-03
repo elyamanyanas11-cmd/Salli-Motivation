@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { format } from "date-fns";
 import { MapPin, Bell, BellOff, Clock, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
@@ -25,7 +24,7 @@ const PRAYER_COLORS: Record<PrayerName, string> = {
 
 export default function PrayerTimesPage() {
   const { language, isRTL } = useLanguage();
-  const { location, requestLocation, prayerTimes, iqamaTimes, nextPrayer, countdown, now } = usePrayerTimes();
+  const { location, requestLocation, prayerTimes, iqamaTimes, nextPrayer, iqamaPhase, countdown, now } = usePrayerTimes();
   const { permission, requestPermission, prefs, updatePrefs } = useNotifications(prayerTimes);
 
   const isGranted = location.status === "granted";
@@ -91,29 +90,49 @@ export default function PrayerTimesPage() {
       )}
 
       {/* Next Prayer Countdown */}
-      {isGranted && nextPrayer && countdown && (
-        <div className="rounded-2xl bg-primary/10 border border-primary/20 p-5 text-center space-y-2">
+      {isGranted && countdown && (
+        <div className={cn(
+          "rounded-2xl border p-5 text-center space-y-2",
+          countdown.phase === 'iqama'
+            ? "bg-amber-500/10 border-amber-500/30"
+            : "bg-primary/10 border-primary/20"
+        )}>
           <p className="text-xs uppercase tracking-widest text-primary/70 font-medium">
-            {language === "ar" ? "الصلاة القادمة" : "Next Prayer"}
+            {countdown.phase === 'iqama'
+              ? (language === "ar" ? "الإقامة قريباً" : "Iqama Soon")
+              : (language === "ar" ? "الصلاة القادمة" : "Next Prayer")}
           </p>
-          <p className={cn("text-3xl font-bold", PRAYER_COLORS[nextPrayer.prayer])}>
-            {language === "ar" ? PRAYER_ARABIC[nextPrayer.prayer] : getPrayerDisplayName(nextPrayer.prayer)}
+          <p className={cn("text-3xl font-bold", PRAYER_COLORS[countdown.prayer])}>
+            {language === "ar" ? PRAYER_ARABIC[countdown.prayer] : getPrayerDisplayName(countdown.prayer)}
           </p>
+          {countdown.phase === 'iqama' && (
+            <p className="text-xs text-amber-500 font-semibold uppercase tracking-widest">
+              {language === "ar" ? "بين الأذان والإقامة" : "Between Adhan & Iqama"}
+            </p>
+          )}
           <p className="text-4xl font-mono font-bold tracking-wider">
             {String(countdown.hours).padStart(2, "0")}:{String(countdown.minutes).padStart(2, "0")}:{String(countdown.seconds).padStart(2, "0")}
           </p>
-          <p className="text-xs text-muted-foreground">
-            {language === "ar" ? "الأذان الساعة" : "Adhan at"}{" "}
-            <span className="font-medium text-foreground">{format(nextPrayer.time, "h:mm a")}</span>
-            {" · "}
-            {language === "ar" ? "الإقامة الساعة" : "Iqama at"}{" "}
-            <span className="font-medium text-foreground">
-              {format(
-                new Date(nextPrayer.time.getTime() + IQAMA_OFFSET_MINUTES[nextPrayer.prayer] * 60000),
-                "h:mm a"
+          {prayerTimes && iqamaTimes && countdown.phase === 'adhan' && (
+            <p className="text-xs text-muted-foreground">
+              {language === "ar" ? "الأذان الساعة" : "Adhan at"}{" "}
+              <span className="font-medium text-foreground">{format(countdown.time, "h:mm a")}</span>
+              {" · "}
+              {language === "ar" ? "الإقامة الساعة" : "Iqama at"}{" "}
+              <span className="font-medium text-foreground">
+                {format(iqamaTimes[countdown.prayer], "h:mm a")}
+              </span>
+              {countdown.isTomorrow && (
+                <span className="text-muted-foreground"> ({language === "ar" ? "غداً" : "Tomorrow"})</span>
               )}
-            </span>
-          </p>
+            </p>
+          )}
+          {prayerTimes && iqamaTimes && countdown.phase === 'iqama' && (
+            <p className="text-xs text-muted-foreground">
+              {language === "ar" ? "الإقامة الساعة" : "Iqama at"}{" "}
+              <span className="font-medium text-amber-500">{format(countdown.time, "h:mm a")}</span>
+            </p>
+          )}
         </div>
       )}
 
@@ -127,22 +146,37 @@ export default function PrayerTimesPage() {
           </div>
           <div className="divide-y divide-border/50">
             {PRAYER_NAMES.map((prayer) => {
-              const isNext = nextPrayer?.prayer === prayer && !nextPrayer.isTomorrow;
-              const isPast = prayerTimes[prayer] < now && !isNext;
+              const isIqamaWindow = iqamaPhase?.prayer === prayer;
+              const isNext = !isIqamaWindow && nextPrayer?.prayer === prayer && !nextPrayer.isTomorrow;
+              const isPast = iqamaTimes![prayer] < now && !isNext && !isIqamaWindow;
               return (
                 <div
                   key={prayer}
                   className={cn(
                     "grid grid-cols-3 px-4 py-3.5 items-center transition-colors",
+                    isIqamaWindow && "bg-amber-500/10 border-l-2 border-amber-500",
                     isNext && "bg-primary/5 border-l-2 border-primary",
                     isPast && "opacity-50"
                   )}
                 >
                   <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
-                    <div className={cn("w-2 h-2 rounded-full", isNext ? "bg-primary animate-pulse" : "bg-muted-foreground/30")} />
-                    <span className={cn("font-semibold text-sm", isNext && PRAYER_COLORS[prayer])}>
+                    <div className={cn(
+                      "w-2 h-2 rounded-full animate-pulse",
+                      isIqamaWindow ? "bg-amber-500" : isNext ? "bg-primary" : "bg-muted-foreground/30",
+                      !isIqamaWindow && !isNext && "animate-none"
+                    )} />
+                    <span className={cn(
+                      "font-semibold text-sm",
+                      isIqamaWindow && "text-amber-500",
+                      isNext && PRAYER_COLORS[prayer]
+                    )}>
                       {language === "ar" ? PRAYER_ARABIC[prayer] : getPrayerDisplayName(prayer)}
                     </span>
+                    {isIqamaWindow && (
+                      <span className="text-[10px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded-full font-semibold">
+                        {language === "ar" ? "إقامة" : "Iqama"}
+                      </span>
+                    )}
                   </div>
                   <p className="text-center font-mono text-sm font-medium">
                     {format(prayerTimes[prayer], "h:mm a")}

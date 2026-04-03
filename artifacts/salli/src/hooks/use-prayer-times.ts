@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { calculatePrayerTimes, getIqamaTimes, getNextPrayerFromTimes, getPrayerCountdownFromTime, PRAYER_NAMES, type PrayerName } from '@/lib/prayer-times';
+import { calculatePrayerTimes, getIqamaTimes, getNextPrayerFromTimes, PRAYER_NAMES, type PrayerName } from '@/lib/prayer-times';
 import { differenceInSeconds } from 'date-fns';
 
 export type LocationState =
@@ -8,9 +8,11 @@ export type LocationState =
   | { status: 'granted'; lat: number; lng: number; city?: string }
   | { status: 'denied'; error: string };
 
+export type CountdownPhase = 'adhan' | 'iqama';
+
 const LOCATION_STORAGE_KEY = 'salli_location';
 
-function getPrayerCountdownFromTime2(time: Date, now: Date) {
+function buildCountdown(time: Date, now: Date) {
   const diffSeconds = Math.max(0, differenceInSeconds(time, now));
   return {
     hours: Math.floor(diffSeconds / 3600),
@@ -75,10 +77,44 @@ export function usePrayerTimes() {
   const iqamaTimes = prayerTimes ? getIqamaTimes(prayerTimes) : null;
 
   const nextPrayer =
-    prayerTimes ? getNextPrayerFromTimes(prayerTimes, now) : null;
+    prayerTimes && location.status === 'granted'
+      ? getNextPrayerFromTimes(prayerTimes, now, location.lat, location.lng)
+      : null;
 
-  const countdown =
-    nextPrayer ? getPrayerCountdownFromTime2(nextPrayer.time, now) : null;
+  // Determine if we're currently in the "between adhan and iqama" window for any prayer
+  const iqamaPhase: { prayer: PrayerName; iqamaTime: Date } | null = (() => {
+    if (!prayerTimes || !iqamaTimes) return null;
+    for (const prayer of PRAYER_NAMES) {
+      const adhan = prayerTimes[prayer];
+      const iqama = iqamaTimes[prayer];
+      if (now >= adhan && now < iqama) {
+        return { prayer, iqamaTime: iqama };
+      }
+    }
+    return null;
+  })();
+
+  const countdown = (() => {
+    if (iqamaPhase) {
+      return {
+        phase: 'iqama' as CountdownPhase,
+        prayer: iqamaPhase.prayer,
+        time: iqamaPhase.iqamaTime,
+        isTomorrow: false,
+        ...buildCountdown(iqamaPhase.iqamaTime, now),
+      };
+    }
+    if (nextPrayer) {
+      return {
+        phase: 'adhan' as CountdownPhase,
+        prayer: nextPrayer.prayer,
+        time: nextPrayer.time,
+        isTomorrow: nextPrayer.isTomorrow,
+        ...buildCountdown(nextPrayer.time, now),
+      };
+    }
+    return null;
+  })();
 
   return {
     location,
@@ -86,6 +122,7 @@ export function usePrayerTimes() {
     prayerTimes,
     iqamaTimes,
     nextPrayer,
+    iqamaPhase,
     countdown,
     now,
   };

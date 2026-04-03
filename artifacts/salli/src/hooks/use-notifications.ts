@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { PrayerName } from '@/lib/prayer-times';
 import { PRAYER_NAMES, IQAMA_OFFSET_MINUTES } from '@/lib/prayer-times';
 
@@ -17,6 +17,24 @@ const DEFAULT_PREFS: NotifPref = {
   reminderMinutes: 10,
 };
 
+function getTodayFiredSet(): Set<string> {
+  try {
+    const stored = localStorage.getItem(FIRED_KEY);
+    if (!stored) return new Set();
+    const { date, tags } = JSON.parse(stored);
+    const today = new Date().toISOString().split('T')[0];
+    if (date !== today) return new Set();
+    return new Set(tags as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveFiredSet(tags: Set<string>) {
+  const today = new Date().toISOString().split('T')[0];
+  localStorage.setItem(FIRED_KEY, JSON.stringify({ date: today, tags: [...tags] }));
+}
+
 export function useNotifications(prayerTimes: Record<PrayerName, Date> | null) {
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'denied'
@@ -29,7 +47,6 @@ export function useNotifications(prayerTimes: Record<PrayerName, Date> | null) {
       return DEFAULT_PREFS;
     }
   });
-  const firedRef = useRef<Set<string>>(new Set());
 
   const requestPermission = useCallback(async () => {
     if (typeof Notification === 'undefined') return;
@@ -47,8 +64,10 @@ export function useNotifications(prayerTimes: Record<PrayerName, Date> | null) {
 
   const sendNotif = useCallback((title: string, body: string, tag: string) => {
     if (permission !== 'granted') return;
-    if (firedRef.current.has(tag)) return;
-    firedRef.current.add(tag);
+    const fired = getTodayFiredSet();
+    if (fired.has(tag)) return;
+    fired.add(tag);
+    saveFiredSet(fired);
     try {
       new Notification(title, {
         body,
