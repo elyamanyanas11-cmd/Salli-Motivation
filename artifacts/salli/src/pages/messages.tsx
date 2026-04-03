@@ -7,9 +7,10 @@ import {
   useListMessageThreads,
   useGetMessageThread,
   useSendDirectMessage,
+  useGetFriendStreaks,
 } from "@workspace/api-client-react";
-import type { MessageThread, DirectMessage } from "@workspace/api-zod";
-import { Send, ArrowLeft, MessageCircle, UserCircle2 } from "lucide-react";
+import type { MessageThread } from "@workspace/api-zod";
+import { Send, ArrowLeft, MessageCircle, UserCircle2, Flame } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 function ThreadItem({
@@ -80,6 +81,11 @@ function ChatView({
     },
   });
 
+  const { data: streaks = [] } = useGetFriendStreaks({
+    query: { refetchInterval: 60000 },
+  });
+  const partnerStreak = streaks.find((s) => s.userId === userId);
+
   const send = useSendDirectMessage();
 
   useEffect(() => {
@@ -111,12 +117,27 @@ function ChatView({
         >
           <ArrowLeft className={cn("w-5 h-5", isRTL && "rotate-180")} />
         </button>
-        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
           <span className="text-primary font-semibold text-xs">
             {partnerName.charAt(0).toUpperCase()}
           </span>
         </div>
-        <p className="font-semibold text-sm">{partnerName}</p>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm">{partnerName}</p>
+          {partnerStreak !== undefined && (
+            <p className="text-xs text-muted-foreground">
+              {partnerStreak.todayCompleted}/5 prayers today
+            </p>
+          )}
+        </div>
+        {partnerStreak !== undefined && partnerStreak.currentStreak > 0 && (
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 flex-shrink-0">
+            <Flame className="w-3.5 h-3.5 text-orange-500" />
+            <span className="text-xs font-bold text-orange-500">
+              {partnerStreak.currentStreak}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Messages */}
