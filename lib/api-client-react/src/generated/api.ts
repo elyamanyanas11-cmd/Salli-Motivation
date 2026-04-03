@@ -21,7 +21,9 @@ import type {
   CreateOpenaiConversationBody,
   DirectMessage,
   ErrorResponse,
+  FriendPrayerActivity,
   FriendRequest,
+  FriendStreak,
   HealthStatus,
   LeaderboardEntry,
   LoginBody,
@@ -1009,6 +1011,156 @@ export function useGetPrayerStats<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetPrayerStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get streaks and today's prayer progress for all friends
+ */
+export const getGetFriendStreaksUrl = () => {
+  return `/api/prayers/friends/streaks`;
+};
+
+export const getFriendStreaks = async (
+  options?: RequestInit,
+): Promise<FriendStreak[]> => {
+  return customFetch<FriendStreak[]>(getGetFriendStreaksUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetFriendStreaksQueryKey = () => {
+  return [`/api/prayers/friends/streaks`] as const;
+};
+
+export const getGetFriendStreaksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFriendStreaks>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getFriendStreaks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetFriendStreaksQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getFriendStreaks>>
+  > = ({ signal }) => getFriendStreaks({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFriendStreaks>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFriendStreaksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFriendStreaks>>
+>;
+export type GetFriendStreaksQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get streaks and today's prayer progress for all friends
+ */
+
+export function useGetFriendStreaks<
+  TData = Awaited<ReturnType<typeof getFriendStreaks>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getFriendStreaks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFriendStreaksQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get recent prayer activity from friends (last 24 hours)
+ */
+export const getGetFriendActivityUrl = () => {
+  return `/api/prayers/friends/activity`;
+};
+
+export const getFriendActivity = async (
+  options?: RequestInit,
+): Promise<FriendPrayerActivity[]> => {
+  return customFetch<FriendPrayerActivity[]>(getGetFriendActivityUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetFriendActivityQueryKey = () => {
+  return [`/api/prayers/friends/activity`] as const;
+};
+
+export const getGetFriendActivityQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFriendActivity>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getFriendActivity>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetFriendActivityQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getFriendActivity>>
+  > = ({ signal }) => getFriendActivity({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFriendActivity>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFriendActivityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFriendActivity>>
+>;
+export type GetFriendActivityQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get recent prayer activity from friends (last 24 hours)
+ */
+
+export function useGetFriendActivity<
+  TData = Awaited<ReturnType<typeof getFriendActivity>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getFriendActivity>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFriendActivityQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

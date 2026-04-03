@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLogout, useGetNotificationsCount } from "@workspace/api-client-react";
 import { useLanguage } from "@/contexts/language-context";
 import { useSocialNotifications } from "@/hooks/use-social-notifications";
+import { useFriendActivityNotifications } from "@/hooks/use-friend-activity-notifications";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -26,6 +27,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     notifCount?.unreadMessages ?? 0,
     isAuthenticated
   );
+
+  useFriendActivityNotifications();
 
   useEffect(() => {
     setIsMobileMenuOpen(false);

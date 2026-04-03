@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, and, desc } from "drizzle-orm";
-import { db, prayerLogsTable } from "@workspace/db";
+import { eq, and, desc, or, sql, gte } from "drizzle-orm";
+import { db, prayerLogsTable, prayerActivityTable, usersTable, friendships } from "@workspace/db";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isToday, subDays } from "date-fns";
 
 const router: IRouter = Router();
@@ -37,6 +37,40 @@ function toPrayerDay(row: { date: string; fajr: boolean; dhuhr: boolean; asr: bo
   };
 }
 
+async function computeStreak(userId: number): Promise<number> {
+  const allLogs = await db
+    .select()
+    .from(prayerLogsTable)
+    .where(eq(prayerLogsTable.userId, userId))
+    .orderBy(desc(prayerLogsTable.date));
+  const logMap = new Map(allLogs.map((l) => [l.date, l]));
+  let streak = 0;
+  let checkDate = format(new Date(), "yyyy-MM-dd");
+  while (true) {
+    const log = logMap.get(checkDate);
+    if (log && countCompleted(log) === 5) {
+      streak++;
+      checkDate = format(subDays(new Date(checkDate + "T12:00:00"), 1), "yyyy-MM-dd");
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+async function getFriendIds(myId: number): Promise<number[]> {
+  const rows = await db
+    .select()
+    .from(friendships)
+    .where(
+      and(
+        or(eq(friendships.requesterId, myId), eq(friendships.addresseeId, myId)),
+        eq(friendships.status, "accepted")
+      )
+    );
+  return rows.map((r) => (r.requesterId === myId ? r.addresseeId : r.requesterId));
+}
+
 // GET /api/prayers/stats — must be before /:date to avoid param match
 router.get("/prayers/stats", async (req, res): Promise<void> => {
   if (!req.isAuthenticated()) {
@@ -45,7 +79,6 @@ router.get("/prayers/stats", async (req, res): Promise<void> => {
   }
   const userId = req.user.id;
 
-  // Total prayers ever
   const allLogs = await db
     .select()
     .from(prayerLogsTable)
@@ -57,13 +90,9 @@ router.get("/prayers/stats", async (req, res): Promise<void> => {
     totalPrayers += countCompleted(log);
   }
 
-  // Current streak — count consecutive days with all 5 prayers done from today backwards
-  let streak = 0;
-  const today = format(new Date(), "yyyy-MM-dd");
-  let checkDate = today;
-
   const logMap = new Map(allLogs.map((l) => [l.date, l]));
-
+  let streak = 0;
+  let checkDate = format(new Date(), "yyyy-MM-dd");
   while (true) {
     const log = logMap.get(checkDate);
     if (log && countCompleted(log) === 5) {
@@ -74,7 +103,6 @@ router.get("/prayers/stats", async (req, res): Promise<void> => {
     }
   }
 
-  // Weekly stats
   const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
   const weekEnd = format(endOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
   const weekLogs = allLogs.filter((l) => l.date >= weekStart && l.date <= weekEnd);
@@ -82,6 +110,129 @@ router.get("/prayers/stats", async (req, res): Promise<void> => {
   const weeklyPercentage = Math.round((weeklyTotal / 35) * 100);
 
   res.json({ currentStreak: streak, totalPrayers, weeklyTotal, weeklyPercentage });
+});
+
+// GET /api/prayers/friends/streaks
+router.get("/prayers/friends/streaks", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const myId = req.user.id;
+  const friendIds = await getFriendIds(myId);
+
+  if (friendIds.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  const friendUsers = await db
+    .select({ id: usersTable.id, displayName: usersTable.displayName, username: usersTable.username })
+    .from(usersTable)
+    .where(sql`${usersTable.id} = ANY(${friendIds})`);
+
+  const today = format(new Date(), "yyyy-MM-dd");
+  const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
+  const weekEnd = format(endOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
+
+  const results = await Promise.all(
+    friendUsers.map(async (u) => {
+      const logs = await db
+        .select()
+        .from(prayerLogsTable)
+        .where(eq(prayerLogsTable.userId, u.id))
+        .orderBy(desc(prayerLogsTable.date));
+
+      const logMap = new Map(logs.map((l) => [l.date, l]));
+
+      let streak = 0;
+      let checkDate = today;
+      while (true) {
+        const log = logMap.get(checkDate);
+        if (log && countCompleted(log) === 5) {
+          streak++;
+          checkDate = format(subDays(new Date(checkDate + "T12:00:00"), 1), "yyyy-MM-dd");
+        } else {
+          break;
+        }
+      }
+
+      const todayLog = logMap.get(today);
+      const todayCompleted = todayLog ? countCompleted(todayLog) : 0;
+
+      const weekLogs = logs.filter((l) => l.date >= weekStart && l.date <= weekEnd);
+      const weeklyTotal = weekLogs.reduce((sum, l) => sum + countCompleted(l), 0);
+      const weeklyPercentage = Math.round((weeklyTotal / 35) * 100);
+
+      return {
+        userId: u.id,
+        displayName: u.displayName,
+        username: u.username ?? null,
+        currentStreak: streak,
+        todayCompleted,
+        weeklyPercentage,
+      };
+    })
+  );
+
+  results.sort((a, b) => b.currentStreak - a.currentStreak || b.weeklyPercentage - a.weeklyPercentage);
+  res.json(results);
+});
+
+// GET /api/prayers/friends/activity
+router.get("/prayers/friends/activity", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const myId = req.user.id;
+  const friendIds = await getFriendIds(myId);
+
+  if (friendIds.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const activities = await db
+    .select()
+    .from(prayerActivityTable)
+    .where(
+      and(
+        sql`${prayerActivityTable.userId} = ANY(${friendIds})`,
+        gte(prayerActivityTable.createdAt, since)
+      )
+    )
+    .orderBy(desc(prayerActivityTable.createdAt))
+    .limit(50);
+
+  if (activities.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  const userIds = [...new Set(activities.map((a) => a.userId))];
+  const users = await db
+    .select({ id: usersTable.id, displayName: usersTable.displayName, username: usersTable.username })
+    .from(usersTable)
+    .where(sql`${usersTable.id} = ANY(${userIds})`);
+  const userMap = new Map(users.map((u) => [u.id, u]));
+
+  res.json(
+    activities.map((a) => {
+      const u = userMap.get(a.userId);
+      return {
+        activityId: a.id,
+        userId: a.userId,
+        displayName: u?.displayName ?? "Unknown",
+        username: u?.username ?? null,
+        prayer: a.prayer,
+        date: a.date,
+        createdAt: a.createdAt.toISOString(),
+      };
+    })
+  );
 });
 
 // GET /api/prayers/week
@@ -162,6 +313,13 @@ router.post("/prayers/:date/:prayer", async (req, res): Promise<void> => {
     .set({ [prayer]: true })
     .where(and(eq(prayerLogsTable.userId, req.user.id), eq(prayerLogsTable.date, date)))
     .returning();
+
+  // Log activity event so friends can see it
+  await db.insert(prayerActivityTable).values({
+    userId: req.user.id,
+    date,
+    prayer,
+  });
 
   res.json(toPrayerDay(updated));
 });

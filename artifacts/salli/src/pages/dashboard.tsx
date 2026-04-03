@@ -2,25 +2,38 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { format, startOfWeek, subDays } from "date-fns";
 import { Trophy, Flame, Star, Award, Medal, Crown, Shield, Activity, Users, Sunrise, Moon, Check, Compass } from "lucide-react";
-import { useGetWeeklyPrayers, useGetPrayerStats } from "@workspace/api-client-react";
+import { useGetWeeklyPrayers, useGetPrayerStats, useGetFriendStreaks, useGetFriendActivity } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { PRAYER_NAMES } from "@/lib/prayer-times";
+import { PRAYER_NAMES, getPrayerDisplayName } from "@/lib/prayer-times";
 import { Button } from "@/components/ui/button";
+import { formatDistanceToNow } from "date-fns";
+
+const PRAYER_EMOJI: Record<string, string> = {
+  fajr: "🌅",
+  dhuhr: "☀️",
+  asr: "🌤️",
+  maghrib: "🌇",
+  isha: "🌙",
+};
 
 export default function Dashboard() {
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
   
   const { data: weeklyData, isLoading: isWeeklyLoading } = useGetWeeklyPrayers({
-    query: {
-      enabled: isAuthenticated,
-    }
+    query: { enabled: isAuthenticated }
   });
 
   const { data: statsData, isLoading: isStatsLoading } = useGetPrayerStats({
-    query: {
-      enabled: isAuthenticated,
-    }
+    query: { enabled: isAuthenticated }
+  });
+
+  const { data: friendStreaks = [], isLoading: isFriendStreaksLoading } = useGetFriendStreaks({
+    query: { enabled: isAuthenticated, refetchInterval: 60000 }
+  });
+
+  const { data: friendActivity = [] } = useGetFriendActivity({
+    query: { enabled: isAuthenticated, refetchInterval: 30000 }
   });
 
   const isLoading = isAuthLoading || isWeeklyLoading || isStatsLoading;
@@ -48,12 +61,6 @@ export default function Dashboard() {
     if (streak < 30) return "Incredible dedication. Allah loves consistent deeds.";
     return "Outstanding! You are a true inspiration.";
   };
-
-  const MOCK_FRIENDS = [
-    { name: "Ahmed", percent: 92, avatar: "A" },
-    { name: "Fatima", percent: 85, avatar: "F" },
-    { name: "Omar", percent: 60, avatar: "O" },
-  ];
 
   if (!isAuthenticated && !isAuthLoading) {
     return (
@@ -130,7 +137,6 @@ export default function Dashboard() {
             
             <div className="overflow-x-auto">
               <div className="min-w-[500px]">
-                {/* Header Row */}
                 <div className="grid grid-cols-6 gap-2 mb-4">
                   <div className="text-sm font-medium text-muted-foreground">Day</div>
                   {PRAYER_NAMES.map(prayer => (
@@ -140,69 +146,152 @@ export default function Dashboard() {
                   ))}
                 </div>
                 
-                {/* Days Rows */}
                 <div className="space-y-3">
-                  {weeklyData?.days.map((day) => {
-                    return (
-                      <div key={day.date} className={cn(
-                        "grid grid-cols-6 gap-2 p-2 rounded-xl items-center",
-                        day.isToday ? "bg-primary/5" : ""
-                      )}>
-                        <div className="text-sm font-medium">
-                          <span className="block">{day.dayName}</span>
-                          <span className="text-xs text-muted-foreground">{format(new Date(day.date), 'MMM d')}</span>
-                        </div>
-                        
-                        {PRAYER_NAMES.map(prayer => {
-                          const isCompleted = day[prayer as keyof typeof day];
-                          return (
-                            <div key={`${day.date}-${prayer}`} className="flex justify-center">
-                              <div className={cn(
-                                "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                                isCompleted ? "bg-primary text-primary-foreground" : "bg-muted text-transparent"
-                              )}>
-                                <Check className="w-4 h-4" />
-                              </div>
-                            </div>
-                          );
-                        })}
+                  {weeklyData?.days.map((day) => (
+                    <div key={day.date} className={cn(
+                      "grid grid-cols-6 gap-2 p-2 rounded-xl items-center",
+                      day.isToday ? "bg-primary/5" : ""
+                    )}>
+                      <div className="text-sm font-medium">
+                        <span className="block">{day.dayName}</span>
+                        <span className="text-xs text-muted-foreground">{format(new Date(day.date), 'MMM d')}</span>
                       </div>
-                    );
-                  })}
+                      
+                      {PRAYER_NAMES.map(prayer => {
+                        const isCompleted = day[prayer as keyof typeof day];
+                        return (
+                          <div key={`${day.date}-${prayer}`} className="flex justify-center">
+                            <div className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                              isCompleted ? "bg-primary text-primary-foreground" : "bg-muted text-transparent"
+                            )}>
+                              <Check className="w-4 h-4" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Friends Section */}
+          {/* Friends Streaks Section */}
           <div className="glass rounded-3xl p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
-              <Users className="w-5 h-5 text-muted-foreground" />
-              <h2 className="text-lg font-serif font-bold text-foreground">Community</h2>
+              <Flame className="w-5 h-5 text-orange-500" />
+              <h2 className="text-lg font-serif font-bold text-foreground">Friend Streaks</h2>
             </div>
             
-            <div className="space-y-4">
-              {MOCK_FRIENDS.map((friend, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-secondary/20 text-secondary-foreground flex items-center justify-center font-bold">
-                    {friend.avatar}
+            {isFriendStreaksLoading ? (
+              <div className="flex justify-center py-6">
+                <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              </div>
+            ) : friendStreaks.length === 0 ? (
+              <div className="text-center py-6 space-y-2">
+                <Users className="w-8 h-8 text-muted-foreground mx-auto" />
+                <p className="text-sm text-muted-foreground">Add friends to compare streaks</p>
+                <Link href="/social">
+                  <span className="text-xs text-primary hover:underline cursor-pointer">Find friends →</span>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* My own streak for comparison */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
+                  <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-primary font-bold text-sm">{user?.displayName?.charAt(0).toUpperCase()}</span>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-sm">{friend.name}</span>
-                      <span className="text-xs font-bold text-muted-foreground">{friend.percent}%</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="font-medium text-sm truncate">{user?.displayName} <span className="text-xs text-primary font-normal">(you)</span></span>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Flame className="w-3.5 h-3.5 text-orange-500" />
+                        <span className="text-xs font-bold text-orange-500">{streak}d</span>
+                      </div>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-secondary transition-all"
-                        style={{ width: `${friend.percent}%` }}
-                      />
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${weeklyPercentage}%` }} />
                     </div>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{weeklyPercentage}% this week</p>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {friendStreaks.map((friend) => (
+                  <div key={friend.userId} className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/30 transition-colors">
+                    <div className="w-9 h-9 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-secondary-foreground font-bold text-sm">
+                        {friend.displayName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-medium text-sm truncate">{friend.displayName}</span>
+                          {friend.todayCompleted === 5 && (
+                            <span className="text-[10px] bg-green-500/15 text-green-600 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">All 5 ✓</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Flame className={cn("w-3.5 h-3.5", friend.currentStreak > 0 ? "text-orange-500" : "text-muted-foreground")} />
+                          <span className={cn("text-xs font-bold", friend.currentStreak > 0 ? "text-orange-500" : "text-muted-foreground")}>
+                            {friend.currentStreak}d
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            friend.weeklyPercentage >= 80 ? "bg-green-500" :
+                            friend.weeklyPercentage >= 50 ? "bg-amber-500" : "bg-rose-400"
+                          )}
+                          style={{ width: `${friend.weeklyPercentage}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {friend.weeklyPercentage}% this week · {friend.todayCompleted}/5 today
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Friends Activity Feed */}
+          {friendActivity.length > 0 && (
+            <div className="glass rounded-3xl p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Activity className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-serif font-bold text-foreground">Friend Activity</h2>
+                <span className="text-xs text-muted-foreground ml-auto">Last 24h</span>
+              </div>
+              <div className="space-y-2">
+                {friendActivity.slice(0, 10).map((item) => (
+                  <div key={item.activityId} className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-muted/30 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-primary font-semibold text-xs">
+                        {item.displayName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm">
+                        <span className="font-medium">{item.displayName}</span>
+                        <span className="text-muted-foreground"> prayed </span>
+                        <span className="font-medium">{PRAYER_EMOJI[item.prayer] || "🕌"} {getPrayerDisplayName(item.prayer as any)}</span>
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+                      </p>
+                    </div>
+                    <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Badges Section */}

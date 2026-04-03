@@ -190,6 +190,35 @@ export const GetPrayerStatsResponse = zod.object({
 });
 
 /**
+ * @summary Get streaks and today's prayer progress for all friends
+ */
+export const GetFriendStreaksResponseItem = zod.object({
+  userId: zod.number(),
+  displayName: zod.string(),
+  username: zod.string().nullish(),
+  currentStreak: zod.number(),
+  todayCompleted: zod.number(),
+  weeklyPercentage: zod.number(),
+});
+export const GetFriendStreaksResponse = zod.array(GetFriendStreaksResponseItem);
+
+/**
+ * @summary Get recent prayer activity from friends (last 24 hours)
+ */
+export const GetFriendActivityResponseItem = zod.object({
+  activityId: zod.number(),
+  userId: zod.number(),
+  displayName: zod.string(),
+  username: zod.string().nullish(),
+  prayer: zod.string(),
+  date: zod.string(),
+  createdAt: zod.string(),
+});
+export const GetFriendActivityResponse = zod.array(
+  GetFriendActivityResponseItem,
+);
+
+/**
  * @summary Search users by username
  */
 export const SearchUsersQueryParams = zod.object({

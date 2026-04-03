@@ -5,3 +5,4 @@ export * from "./conversations";
 export * from "./messages";
 export * from "./friendships";
 export * from "./direct_messages";
+export * from "./prayer_activity";

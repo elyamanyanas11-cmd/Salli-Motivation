@@ -291,6 +291,48 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /prayers/friends/streaks:
+    get:
+      operationId: getFriendStreaks
+      tags: [prayers]
+      summary: Get streaks and today's prayer progress for all friends
+      responses:
+        "200":
+          description: Friend streaks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FriendStreak"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /prayers/friends/activity:
+    get:
+      operationId: getFriendActivity
+      tags: [prayers]
+      summary: Get recent prayer activity from friends (last 24 hours)
+      responses:
+        "200":
+          description: Friend activity feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FriendPrayerActivity"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /social/users/search:
     get:
       operationId: searchUsers
@@ -884,6 +926,53 @@ components:
         - totalPrayers
         - weeklyTotal
         - weeklyPercentage
+
+    FriendStreak:
+      type: object
+      properties:
+        userId:
+          type: integer
+        displayName:
+          type: string
+        username:
+          type: ["string", "null"]
+        currentStreak:
+          type: integer
+        todayCompleted:
+          type: integer
+        weeklyPercentage:
+          type: integer
+      required:
+        - userId
+        - displayName
+        - currentStreak
+        - todayCompleted
+        - weeklyPercentage
+
+    FriendPrayerActivity:
+      type: object
+      properties:
+        activityId:
+          type: integer
+        userId:
+          type: integer
+        displayName:
+          type: string
+        username:
+          type: ["string", "null"]
+        prayer:
+          type: string
+        date:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - activityId
+        - userId
+        - displayName
+        - prayer
+        - date
+        - createdAt
 
     SocialUser:
       type: object

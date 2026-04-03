@@ -88,6 +88,27 @@ export interface PrayerStats {
   weeklyPercentage: number;
 }
 
+export interface FriendStreak {
+  userId: number;
+  displayName: string;
+  /** @nullable */
+  username?: string | null;
+  currentStreak: number;
+  todayCompleted: number;
+  weeklyPercentage: number;
+}
+
+export interface FriendPrayerActivity {
+  activityId: number;
+  userId: number;
+  displayName: string;
+  /** @nullable */
+  username?: string | null;
+  prayer: string;
+  date: string;
+  createdAt: string;
+}
+
 export type SocialUserFriendshipStatus =
   (typeof SocialUserFriendshipStatus)[keyof typeof SocialUserFriendshipStatus];
 
